@@ -49,20 +49,23 @@ def download_street_pages():
         for street_name in street_names:
             total_streets += 1
 
+            # Strip trailing/leading spaces from street name
+            street_name_clean = street_name.strip()
+
             # Create safe filename (replace spaces and special chars)
-            safe_filename = street_name.strip().replace(" ", "_").replace("/", "_")
+            safe_filename = street_name_clean.replace(" ", "_").replace("/", "_")
             output_file = output_dir / f"{safe_filename}.html"
 
             # Skip if already downloaded
             if output_file.exists():
-                print(f"  ✓ Skipping {street_name} (already exists)")
+                print(f"  ✓ Skipping {street_name_clean} (already exists)")
                 successful_downloads += 1
                 continue
 
-            # Build URL
-            url = base_url.format(name=street_name)
+            # Build URL with cleaned street name
+            url = base_url.format(name=street_name_clean)
 
-            print(f"  Downloading {street_name}... ", end="", flush=True)
+            print(f"  Downloading {street_name_clean}... ", end="", flush=True)
 
             try:
                 response = requests.get(url, timeout=30, verify=False)

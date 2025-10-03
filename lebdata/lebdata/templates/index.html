@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lebanon NH Assessment Data</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.css" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+        .info {
+            padding: 6px 8px;
+            font: 14px/16px Arial, Helvetica, sans-serif;
+            background: white;
+            background: rgba(255,255,255,0.8);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+        }
+        .info h4 {
+            margin: 0 0 5px;
+            color: #777;
+        }
+        .legend {
+            line-height: 18px;
+            color: #555;
+        }
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.7;
+        }
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading">Loading parcel data...</div>
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+    <script>
+        // Initialize map centered on Lebanon, NH
+        const map = L.map('map').setView([43.6422, -72.2517], 13);
+
+        // Add OpenStreetMap tile layer (street map)
+        const streetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Layer groups
+        const parcelMarkers = L.layerGroup().addTo(map);
+        let heatmapLayer = null;
+
+        // Add layer control
+        const baseMaps = {
+            "Street Map": streetMap
+        };
+
+        const overlayMaps = {
+            "Parcel Markers": parcelMarkers
+        };
+
+        const layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+        // Add legend
+        const legend = L.control({position: 'bottomright'});
+        legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'info legend');
+            div.innerHTML = '<h4>Assessment Change 2024-2025</h4>';
+            const grades = [-10, 0, 10, 20, 30, 40];
+            const colors = ['#0000ff', '#00ffff', '#00ff00', '#ffff00', '#ff8800', '#ff0000'];
+
+            for (let i = 0; i < grades.length; i++) {
+                div.innerHTML +=
+                    '<i style="background:' + colors[i] + '"></i> ' +
+                    grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '%<br>' : '+%');
+            }
+            return div;
+        };
+        legend.addTo(map);
+
+        // Function to get color based on percentage change
+        function getColor(pctChange) {
+            return pctChange > 40 ? '#ff0000' :
+                   pctChange > 30 ? '#ff8800' :
+                   pctChange > 20 ? '#ffff00' :
+                   pctChange > 10 ? '#00ff00' :
+                   pctChange > 0  ? '#00ffff' :
+                                    '#0000ff';
+        }
+
+        // Load parcel data
+        fetch('/api/parcels')
+            .then(response => response.json())
+            .then(parcels => {
+                document.getElementById('loading').style.display = 'none';
+
+                // Prepare data for heatmap
+                const heatData = [];
+
+                // Add parcel markers
+                parcels.forEach(parcel => {
+                    if (parcel.lat && parcel.lon) {
+                        // Create marker
+                        const marker = L.circleMarker([parcel.lat, parcel.lon], {
+                            radius: 6,
+                            fillColor: getColor(parcel.pct_change),
+                            color: '#000',
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        });
+
+                        // Create popup content
+                        const popupContent = `
+                            <strong>PID:</strong> ${parcel.pid}<br>
+                            <strong>Location:</strong> ${parcel.location}<br>
+                            <strong>Type:</strong> ${parcel.property_type}<br>
+                            <strong>Assessment 2025:</strong> ${parcel.assessment_2025}<br>
+                            <strong>Assessment 2024:</strong> ${parcel.assessment_2024}<br>
+                            <strong>Change:</strong> ${parcel.pct_change}%
+                        `;
+
+                        marker.bindPopup(popupContent);
+                        marker.addTo(parcelMarkers);
+
+                        // Add to heatmap data (use intensity based on absolute percent change)
+                        heatData.push([parcel.lat, parcel.lon, Math.abs(parcel.pct_change) / 100]);
+                    }
+                });
+
+                // Create heatmap layer
+                heatmapLayer = L.heatLayer(heatData, {
+                    radius: 25,
+                    blur: 15,
+                    maxZoom: 17,
+                    max: 0.5,
+                    gradient: {
+                        0.0: 'blue',
+                        0.2: 'cyan',
+                        0.4: 'lime',
+                        0.6: 'yellow',
+                        0.8: 'orange',
+                        1.0: 'red'
+                    }
+                });
+
+                // Add heatmap to layer control
+                overlayMaps['Assessment Change Heatmap'] = heatmapLayer;
+                layerControl.remove();
+                L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+                console.log(`Loaded ${parcels.length} parcels`);
+            })
+            .catch(error => {
+                console.error('Error loading parcels:', error);
+                document.getElementById('loading').innerHTML = 'Error loading data';
+            });
+    </script>
+</body>
+</html>

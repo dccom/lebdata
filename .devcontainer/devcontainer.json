@@ -16,6 +16,13 @@
   "mounts": [
     "source=${localWorkspaceFolder}/workspace,target=/workspaces/vgsi/workspace,type=bind"
   ],
+  "forwardPorts": [5000],
+  "portsAttributes": {
+    "5000": {
+      "label": "Flask Web App",
+      "onAutoForward": "notify"
+    }
+  },
   "postCreateCommand": "pip install -r requirements.txt",
   "remoteUser": "vscode"
 }

@@ -104,15 +104,35 @@ def extract_parcel_info(html_file):
             property_type = model_match.group(1)
 
     # Extract historical valuation data
-    valuation_years = {}
+    appraisal_years = {}
+    assessment_years = {}
 
-    # Pattern for valuation tables (Appraisal and Assessment sections)
-    table_pattern = r'<td>(\d{4})</td><td align="right">\$([^<]+)</td><td align="right">\$([^<]+)</td><td align="right">\$([^<]+)</td>'
-    for match in re.finditer(table_pattern, html_content):
-        year = match.group(1)
-        total = match.group(4).replace(',', '')
-        if year not in valuation_years:
-            valuation_years[year] = total
+    # Find Appraisal history table
+    appraisal_table_match = re.search(
+        r'id="MainContent_grdHistoryValuesAppr"[^>]*>.*?<caption>\s*Appraisal\s*</caption>(.*?)</table>',
+        html_content, re.DOTALL
+    )
+    if appraisal_table_match:
+        table_content = appraisal_table_match.group(1)
+        # Pattern for table rows: year, improvements, land, total
+        row_pattern = r'<td>(\d{4})</td><td align="right">\$([^<]+)</td><td align="right">\$([^<]+)</td><td align="right">\$([^<]+)</td>'
+        for match in re.finditer(row_pattern, table_content):
+            year = match.group(1)
+            total = match.group(4).replace(',', '')
+            appraisal_years[year] = total
+
+    # Find Assessment history table
+    assessment_table_match = re.search(
+        r'id="MainContent_grdHistoryValuesAsmt"[^>]*>.*?<caption>\s*Assessment\s*</caption>(.*?)</table>',
+        html_content, re.DOTALL
+    )
+    if assessment_table_match:
+        table_content = assessment_table_match.group(1)
+        row_pattern = r'<td>(\d{4})</td><td align="right">\$([^<]+)</td><td align="right">\$([^<]+)</td><td align="right">\$([^<]+)</td>'
+        for match in re.finditer(row_pattern, table_content):
+            year = match.group(1)
+            total = match.group(4).replace(',', '')
+            assessment_years[year] = total
 
     return {
         'pid': pid,
@@ -120,10 +140,14 @@ def extract_parcel_info(html_file):
         'property_type': property_type,
         'assessment_2025': assessment,
         'appraisal_2025': appraisal,
-        'valuation_2024': valuation_years.get('2024', ''),
-        'valuation_2023': valuation_years.get('2023', ''),
-        'valuation_2022': valuation_years.get('2022', ''),
-        'valuation_2021': valuation_years.get('2021', ''),
+        'appraisal_2024': appraisal_years.get('2024', ''),
+        'appraisal_2023': appraisal_years.get('2023', ''),
+        'appraisal_2022': appraisal_years.get('2022', ''),
+        'appraisal_2021': appraisal_years.get('2021', ''),
+        'assessment_2024': assessment_years.get('2024', ''),
+        'assessment_2023': assessment_years.get('2023', ''),
+        'assessment_2022': assessment_years.get('2022', ''),
+        'assessment_2021': assessment_years.get('2021', ''),
     }
 
 
@@ -155,12 +179,16 @@ def extract_all_parcels():
             'pid',
             'location',
             'property_type',
-            'assessment_2025',
             'appraisal_2025',
-            'valuation_2024',
-            'valuation_2023',
-            'valuation_2022',
-            'valuation_2021',
+            'assessment_2025',
+            'appraisal_2024',
+            'assessment_2024',
+            'appraisal_2023',
+            'assessment_2023',
+            'appraisal_2022',
+            'assessment_2022',
+            'appraisal_2021',
+            'assessment_2021',
         ]
 
         with output_file.open('w', newline='', encoding='utf-8') as csvfile:

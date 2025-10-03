@@ -1,0 +1,21 @@
+{
+  "name": "VGSI Python Development",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.pythonPath": "/usr/local/bin/python"
+      }
+    }
+  },
+  "mounts": [
+    "source=${localWorkspaceFolder}/workspace,target=/workspaces/vgsi/workspace,type=bind"
+  ],
+  "postCreateCommand": "pip install -r requirements.txt",
+  "remoteUser": "vscode"
+}

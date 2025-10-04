@@ -26,7 +26,7 @@ This project downloads and visualizes property assessment data for Lebanon, NH.
    ```
 
 4. **Open your browser**
-   - Go to: http://localhost:5000
+   - Go to: http://localhost:5050
    - You should see an interactive map with property data
 
 5. **To stop the server**
@@ -35,7 +35,7 @@ This project downloads and visualizes property assessment data for Lebanon, NH.
 
 ### Troubleshooting
 
-- **Port 5000 already in use**: Change the port in `docker-compose.yml` from `5000:5000` to `8080:5000`, then visit http://localhost:8080
+- **Port 5050 already in use**: Change the port in `docker-compose.yml` from `5050:5000` to `8080:5000`, then visit http://localhost:8080
 - **Docker not found**: Make sure Docker Desktop is installed and running
 - **Loading takes too long**: The first time, it geocodes all addresses which can take a while. Subsequent loads will be faster.
 

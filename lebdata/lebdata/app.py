@@ -15,12 +15,18 @@ app = Flask(__name__)
 GEOCODE_CACHE_FILE = Path(__file__).parent / 'geocode_cache.json'
 geocode_cache = {}
 
+# Cache for processed parcels (in-memory only)
+parcels_result_cache = None
+
 def load_geocode_cache():
     """Load geocode cache from file."""
     global geocode_cache
-    if GEOCODE_CACHE_FILE.exists():
+    if not geocode_cache and GEOCODE_CACHE_FILE.exists():
         with open(GEOCODE_CACHE_FILE, 'r') as f:
             geocode_cache = json.load(f)
+            print(f"Loaded {len(geocode_cache)} addresses from geocode cache")
+    elif not geocode_cache:
+        print("No geocode cache file found, starting fresh")
 
 def save_geocode_cache():
     """Save geocode cache to file."""
@@ -30,7 +36,11 @@ def save_geocode_cache():
 def geocode_address(address):
     """Geocode an address to lat/lon, using cache if available."""
     if address in geocode_cache:
+        # Cache hit - return immediately
         return geocode_cache[address]
+
+    # Cache miss - need to geocode
+    print(f"Cache miss for: {address}")
 
     # Add Lebanon, NH to the address for better geocoding
     full_address = f"{address}, Lebanon, NH 03766"
@@ -85,28 +95,44 @@ def index():
 @app.route('/api/parcels')
 def get_parcels():
     """API endpoint to get parcel data with geocoding."""
+    global parcels_result_cache
+
+    # If we have cached results, return them immediately
+    if parcels_result_cache is not None:
+        print(f"Returning {len(parcels_result_cache)} parcels from result cache")
+        return jsonify(parcels_result_cache)
+
     try:
         load_geocode_cache()
         parcels = load_parcel_data()
 
         print(f"Loaded {len(parcels)} parcels from CSV")
 
-        # Geocode addresses (only those not in cache)
+        # Geocode addresses (only those not in geocode cache)
         parcels_with_coords = []
         count = 0
+        new_geocodes = 0
+
         for parcel in parcels:
             location = parcel.get('location', '').strip()
             if location:
+                was_in_cache = location in geocode_cache
                 coords = geocode_address(location)
                 if coords:
                     parcel['lat'] = coords['lat']
                     parcel['lon'] = coords['lon']
                     parcels_with_coords.append(parcel)
                     count += 1
-                    if count % 10 == 0:
-                        print(f"Geocoded {count} parcels...")
+                    if not was_in_cache:
+                        new_geocodes += 1
+                    if count % 100 == 0:
+                        print(f"Processed {count} parcels ({new_geocodes} new geocodes)...")
 
-        print(f"Returning {len(parcels_with_coords)} parcels with coordinates")
+        print(f"Processed {len(parcels_with_coords)} parcels ({new_geocodes} new geocodes)")
+
+        # Cache the result for future requests
+        parcels_result_cache = parcels_with_coords
+
         return jsonify(parcels_with_coords)
     except Exception as e:
         print(f"Error in get_parcels: {e}")

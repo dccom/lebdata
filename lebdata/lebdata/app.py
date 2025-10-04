@@ -52,7 +52,8 @@ def geocode_address(address):
 
 def load_parcel_data():
     """Load parcel data from CSV."""
-    csv_path = Path(__file__).parent.parent.parent.parent / 'workspace' / 'lebanonnh' / 'parcel_details.csv'
+    # Path from lebdata/lebdata/app.py to vgsi/workspace/lebanonnh/parcel_details.csv
+    csv_path = Path(__file__).parent.parent.parent / 'workspace' / 'lebanonnh' / 'parcel_details.csv'
 
     parcels = []
 
@@ -84,21 +85,34 @@ def index():
 @app.route('/api/parcels')
 def get_parcels():
     """API endpoint to get parcel data with geocoding."""
-    load_geocode_cache()
-    parcels = load_parcel_data()
+    try:
+        load_geocode_cache()
+        parcels = load_parcel_data()
 
-    # Geocode addresses (only those not in cache)
-    parcels_with_coords = []
-    for parcel in parcels:
-        location = parcel.get('location', '').strip()
-        if location:
-            coords = geocode_address(location)
-            if coords:
-                parcel['lat'] = coords['lat']
-                parcel['lon'] = coords['lon']
-                parcels_with_coords.append(parcel)
+        print(f"Loaded {len(parcels)} parcels from CSV")
 
-    return jsonify(parcels_with_coords)
+        # Geocode addresses (only those not in cache)
+        parcels_with_coords = []
+        count = 0
+        for parcel in parcels:
+            location = parcel.get('location', '').strip()
+            if location:
+                coords = geocode_address(location)
+                if coords:
+                    parcel['lat'] = coords['lat']
+                    parcel['lon'] = coords['lon']
+                    parcels_with_coords.append(parcel)
+                    count += 1
+                    if count % 10 == 0:
+                        print(f"Geocoded {count} parcels...")
+
+        print(f"Returning {len(parcels_with_coords)} parcels with coordinates")
+        return jsonify(parcels_with_coords)
+    except Exception as e:
+        print(f"Error in get_parcels: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

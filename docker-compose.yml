@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  lebdata-web:
+    build: .
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./workspace:/app/workspace
+      - ./lebdata/lebdata/geocode_cache.json:/app/lebdata/lebdata/geocode_cache.json
+    environment:
+      - FLASK_ENV=development

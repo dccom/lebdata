@@ -30,17 +30,43 @@ def load_geocode_cache():
 
 def save_geocode_cache():
     """Save geocode cache to file."""
-    with open(GEOCODE_CACHE_FILE, 'w') as f:
-        json.dump(geocode_cache, f, indent=2)
+    try:
+        print(f"Attempting to save cache to: {GEOCODE_CACHE_FILE}")
+        with open(GEOCODE_CACHE_FILE, 'w') as f:
+            json.dump(geocode_cache, f, indent=2)
+        print(f"Successfully saved {len(geocode_cache)} entries to cache file")
+    except Exception as e:
+        print(f"ERROR saving cache: {e}")
+        import traceback
+        traceback.print_exc()
+
+def normalize_address(address):
+    """Normalize address for cache lookup (remove unit numbers)."""
+    # Remove unit/apartment numbers like #47, APT 2, etc.
+    import re
+    # Remove patterns like #47, #50, APT 2, UNIT 3, etc.
+    normalized = re.sub(r'\s*#?\s*\d+\s*$', '', address)
+    normalized = re.sub(r'\s+(APT|UNIT|STE|SUITE)\s+\d+\s*$', '', normalized, flags=re.IGNORECASE)
+    return normalized.strip()
 
 def geocode_address(address):
     """Geocode an address to lat/lon, using cache if available."""
+    global geocode_cache
+
+    # Try exact match first
     if address in geocode_cache:
-        # Cache hit - return immediately
         return geocode_cache[address]
 
+    # Try normalized version (without unit number)
+    normalized = normalize_address(address)
+    if normalized != address and normalized in geocode_cache:
+        # Use cached coordinates from base address
+        # Also save this specific address variant to cache for faster future lookups
+        geocode_cache[address] = geocode_cache[normalized]
+        return geocode_cache[normalized]
+
     # Cache miss - need to geocode
-    print(f"Cache miss for: {address}")
+    print(f"Cache miss (will geocode): {address}")
 
     # Add Lebanon, NH to the address for better geocoding
     full_address = f"{address}, Lebanon, NH 03766"
@@ -52,9 +78,17 @@ def geocode_address(address):
         if location:
             result = {'lat': location.latitude, 'lon': location.longitude}
             geocode_cache[address] = result
+
+            # Also cache the normalized version if different
+            if normalized != address:
+                geocode_cache[normalized] = result
+
             save_geocode_cache()
+            print(f"Saved {address} to cache (total: {len(geocode_cache)} addresses)")
             time.sleep(1)  # Rate limiting
             return result
+        else:
+            print(f"Nominatim returned no results for: {address}")
     except Exception as e:
         print(f"Error geocoding {address}: {e}")
 
@@ -129,6 +163,9 @@ def get_parcels():
                         print(f"Processed {count} parcels ({new_geocodes} new geocodes)...")
 
         print(f"Processed {len(parcels_with_coords)} parcels ({new_geocodes} new geocodes)")
+
+        # Save geocode cache (always save since normalization may have added entries)
+        save_geocode_cache()
 
         # Cache the result for future requests
         parcels_result_cache = parcels_with_coords

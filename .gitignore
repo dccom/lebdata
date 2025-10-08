@@ -29,4 +29,7 @@ env/
 .idea/
 
 # Workspace data
-workspace/
+workspace/*
+!workspace/lebanonnh/
+workspace/lebanonnh/*
+!workspace/lebanonnh/parcel_details.csv

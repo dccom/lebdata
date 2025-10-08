@@ -11,6 +11,9 @@ import time
 
 app = Flask(__name__)
 
+# Configuration
+RETRY_FAILED_GEOCODES = False  # Set to True to retry addresses that previously failed
+
 # Cache for geocoded addresses
 GEOCODE_CACHE_FILE = Path(__file__).parent / 'geocode_cache.json'
 geocode_cache = {}
@@ -55,15 +58,26 @@ def geocode_address(address):
 
     # Try exact match first
     if address in geocode_cache:
-        return geocode_cache[address]
+        cached_value = geocode_cache[address]
+        # If cached value is None (failed geocode) and we're not retrying, skip
+        if cached_value is None and not RETRY_FAILED_GEOCODES:
+            return None
+        # If cached value has coordinates, return it
+        if cached_value is not None:
+            return cached_value
 
     # Try normalized version (without unit number)
     normalized = normalize_address(address)
     if normalized != address and normalized in geocode_cache:
+        cached_value = geocode_cache[normalized]
+        # If cached value is None (failed geocode) and we're not retrying, skip
+        if cached_value is None and not RETRY_FAILED_GEOCODES:
+            return None
         # Use cached coordinates from base address
         # Also save this specific address variant to cache for faster future lookups
-        geocode_cache[address] = geocode_cache[normalized]
-        return geocode_cache[normalized]
+        if cached_value is not None:
+            geocode_cache[address] = cached_value
+            return cached_value
 
     # Cache miss - need to geocode
     print(f"Cache miss (will geocode): {address}")
@@ -97,11 +111,18 @@ def geocode_address(address):
 
             time.sleep(0.5)  # Small delay between attempts
 
-        # No results from any zip code
+        # No results from any zip code - save null to cache to avoid retrying
         print(f"Nominatim returned no results for: {address} (tried all zip codes)")
+        geocode_cache[address] = None
+        if normalized != address:
+            geocode_cache[normalized] = None
+        save_geocode_cache()
 
     except Exception as e:
         print(f"Error geocoding {address}: {e}")
+        # Save null to cache to avoid retrying failed geocodes
+        geocode_cache[address] = None
+        save_geocode_cache()
 
     return None
 

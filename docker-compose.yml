@@ -8,6 +8,7 @@ services:
     volumes:
       - ./workspace:/app/workspace
       - ./lebdata:/app/lebdata
+      - ./scripts:/app/scripts
     environment:
       - FLASK_ENV=development
       - FLASK_DEBUG=1

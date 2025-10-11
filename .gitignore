@@ -33,3 +33,4 @@ workspace/*
 !workspace/lebanonnh/
 workspace/lebanonnh/*
 !workspace/lebanonnh/parcel_details.csv
+!workspace/lebanonnh/census_geocode_results.json

@@ -54,10 +54,72 @@
             box-shadow: 0 0 15px rgba(0,0,0,0.3);
             z-index: 1000;
         }
+        .geocode-control {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            max-width: 300px;
+        }
+        .geocode-control h4 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #333;
+        }
+        .geocode-control label {
+            display: block;
+            margin: 5px 0;
+            font-size: 12px;
+        }
+        .geocode-control input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        .geocode-control button {
+            margin-top: 10px;
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 13px;
+        }
+        .geocode-control button:hover {
+            background-color: #45a049;
+        }
+        .geocode-control button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .geocode-control .help-text {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+            line-height: 1.4;
+        }
+        .geocode-control .stats {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            font-size: 11px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <div id="loading" class="loading">Loading parcel data...</div>
+    <div id="geocode-control" class="geocode-control">
+        <h4>Geocoding Sources</h4>
+        <p class="help-text">Select which geocoding services to use. Multiple sources will try each in order until coordinates are found.</p>
+        <div id="source-checkboxes"></div>
+        <button id="reload-btn" onclick="reloadWithSources()">Load Data</button>
+        <div id="stats" class="stats" style="display: none;"></div>
+    </div>
     <div id="map"></div>
 
     <!-- Leaflet JS -->
@@ -116,73 +178,157 @@
                                     '#0000ff';
         }
 
-        // Load parcel data
-        fetch('/api/parcels')
+        // Available geocoders and descriptions
+        let availableGeocoders = {};
+
+        // Load available geocoders
+        fetch('/api/geocoders')
             .then(response => response.json())
-            .then(parcels => {
-                document.getElementById('loading').style.display = 'none';
+            .then(data => {
+                availableGeocoders = data;
+                const checkboxContainer = document.getElementById('source-checkboxes');
 
-                // Prepare data for heatmap
-                const heatData = [];
+                // Create checkboxes for each geocoder
+                data.available.forEach((source, index) => {
+                    const label = document.createElement('label');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = source;
+                    checkbox.id = `source-${source}`;
+                    // Default: check all sources
+                    checkbox.checked = true;
 
-                // Add parcel markers
-                parcels.forEach(parcel => {
-                    if (parcel.lat && parcel.lon) {
-                        // Create marker
-                        const marker = L.circleMarker([parcel.lat, parcel.lon], {
-                            radius: 6,
-                            fillColor: getColor(parcel.pct_change),
-                            color: '#000',
-                            weight: 1,
-                            opacity: 1,
-                            fillOpacity: 0.8
-                        });
-
-                        // Create popup content
-                        const popupContent = `
-                            <strong>PID:</strong> ${parcel.pid}<br>
-                            <strong>Location:</strong> ${parcel.location}<br>
-                            <strong>Type:</strong> ${parcel.property_type}<br>
-                            <strong>Assessment 2025:</strong> ${parcel.assessment_2025}<br>
-                            <strong>Assessment 2024:</strong> ${parcel.assessment_2024}<br>
-                            <strong>Change:</strong> ${parcel.pct_change}%
-                        `;
-
-                        marker.bindPopup(popupContent);
-                        marker.addTo(parcelMarkers);
-
-                        // Add to heatmap data (use intensity based on absolute percent change)
-                        heatData.push([parcel.lat, parcel.lon, Math.abs(parcel.pct_change) / 100]);
-                    }
+                    const description = data.descriptions[source] || source;
+                    label.appendChild(checkbox);
+                    label.appendChild(document.createTextNode(` ${source}: ${description}`));
+                    checkboxContainer.appendChild(label);
                 });
 
-                // Create heatmap layer
-                heatmapLayer = L.heatLayer(heatData, {
-                    radius: 25,
-                    blur: 15,
-                    maxZoom: 17,
-                    max: 0.5,
-                    gradient: {
-                        0.0: 'blue',
-                        0.2: 'cyan',
-                        0.4: 'lime',
-                        0.6: 'yellow',
-                        0.8: 'orange',
-                        1.0: 'red'
-                    }
-                });
-
-                // Add heatmap to layer control
-                overlayMaps['Assessment Change Heatmap'] = heatmapLayer;
-                layerControl.remove();
-                L.control.layers(baseMaps, overlayMaps).addTo(map);
-
-                console.log(`Loaded ${parcels.length} parcels`);
+                // Load data with default sources
+                loadParcels();
             })
             .catch(error => {
-                console.error('Error loading parcels:', error);
-                document.getElementById('loading').innerHTML = 'Error loading data';
+                console.error('Error loading geocoders:', error);
+                // Fallback to nominatim only
+                loadParcels('nominatim');
             });
+
+        function getSelectedSources() {
+            const checkboxes = document.querySelectorAll('#source-checkboxes input[type="checkbox"]:checked');
+            const sources = Array.from(checkboxes).map(cb => cb.value);
+            return sources.length > 0 ? sources : ['nominatim'];
+        }
+
+        function reloadWithSources() {
+            // Clear existing markers and heatmap
+            parcelMarkers.clearLayers();
+            if (heatmapLayer && map.hasLayer(heatmapLayer)) {
+                map.removeLayer(heatmapLayer);
+            }
+
+            // Reset stats
+            document.getElementById('stats').style.display = 'none';
+            document.getElementById('stats').innerHTML = '';
+
+            // Reload data
+            loadParcels();
+        }
+
+        function loadParcels() {
+            const sources = getSelectedSources();
+            const sourcesParam = sources.join(',');
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('reload-btn').disabled = true;
+
+            fetch(`/api/parcels?sources=${sourcesParam}`)
+                .then(response => response.json())
+                .then(parcels => {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('reload-btn').disabled = false;
+
+                    // Prepare data for heatmap
+                    const heatData = [];
+
+                    // Count parcels by source
+                    const sourceStats = {};
+
+                    // Add parcel markers
+                    parcels.forEach(parcel => {
+                        if (parcel.lat && parcel.lon) {
+                            // Track source statistics
+                            const source = parcel.geocode_source || 'unknown';
+                            sourceStats[source] = (sourceStats[source] || 0) + 1;
+
+                            // Create marker
+                            const marker = L.circleMarker([parcel.lat, parcel.lon], {
+                                radius: 6,
+                                fillColor: getColor(parcel.pct_change),
+                                color: '#000',
+                                weight: 1,
+                                opacity: 1,
+                                fillOpacity: 0.8
+                            });
+
+                            // Create popup content
+                            const popupContent = `
+                                <strong>PID:</strong> ${parcel.pid}<br>
+                                <strong>Location:</strong> ${parcel.location}<br>
+                                <strong>Type:</strong> ${parcel.property_type}<br>
+                                <strong>Assessment 2025:</strong> ${parcel.assessment_2025}<br>
+                                <strong>Assessment 2024:</strong> ${parcel.assessment_2024}<br>
+                                <strong>Change:</strong> ${parcel.pct_change}%<br>
+                                <strong>Geocode Source:</strong> ${source}
+                            `;
+
+                            marker.bindPopup(popupContent);
+                            marker.addTo(parcelMarkers);
+
+                            // Add to heatmap data (use intensity based on absolute percent change)
+                            heatData.push([parcel.lat, parcel.lon, Math.abs(parcel.pct_change) / 100]);
+                        }
+                    });
+
+                    // Create heatmap layer
+                    heatmapLayer = L.heatLayer(heatData, {
+                        radius: 25,
+                        blur: 15,
+                        maxZoom: 17,
+                        max: 0.5,
+                        gradient: {
+                            0.0: 'blue',
+                            0.2: 'cyan',
+                            0.4: 'lime',
+                            0.6: 'yellow',
+                            0.8: 'orange',
+                            1.0: 'red'
+                        }
+                    });
+
+                    // Add heatmap to layer control
+                    overlayMaps['Assessment Change Heatmap'] = heatmapLayer;
+                    layerControl.remove();
+                    L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+                    // Display statistics
+                    const statsDiv = document.getElementById('stats');
+                    statsDiv.style.display = 'block';
+                    let statsHtml = `<strong>Loaded ${parcels.length} parcels</strong><br>`;
+                    statsHtml += 'Geocode sources used:<br>';
+                    for (const [source, count] of Object.entries(sourceStats)) {
+                        statsHtml += `&nbsp;&nbsp;${source}: ${count}<br>`;
+                    }
+                    statsDiv.innerHTML = statsHtml;
+
+                    console.log(`Loaded ${parcels.length} parcels`);
+                    console.log('Source breakdown:', sourceStats);
+                })
+                .catch(error => {
+                    console.error('Error loading parcels:', error);
+                    document.getElementById('loading').innerHTML = 'Error loading data';
+                    document.getElementById('reload-btn').disabled = false;
+                });
+        }
     </script>
 </body>
 </html>

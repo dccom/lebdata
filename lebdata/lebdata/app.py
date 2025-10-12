@@ -159,8 +159,22 @@ class CensusGeocoder(Geocoder):
         return None
 
 
+class LegacyGeocoder(Geocoder):
+    """Legacy cache-only geocoder (does not make API calls)."""
+
+    def get_name(self):
+        return "legacy"
+
+    def geocode(self, address):
+        """Return cached coordinates from legacy cache only."""
+        # This geocoder never makes API calls, it only returns cached values
+        # The cache lookup is handled in geocode_address_multi_source
+        return None
+
+
 # Registry of available geocoders
 GEOCODERS = {
+    'legacy': LegacyGeocoder,
     'nominatim': NominatimGeocoder,
     'census': CensusGeocoder,
 }
@@ -183,29 +197,25 @@ def geocode_address_multi_source(address, sources=['nominatim']):
 
     # Try each source in order
     for source_name in sources:
-        # Check legacy cache first
-        if 'legacy' in geocode_cache:
-            cached_value = geocode_cache['legacy'].get(address) or geocode_cache['legacy'].get(normalized)
-            if cached_value is not None and isinstance(cached_value, dict) and 'lat' in cached_value:
-                # Migrate to new format
-                if source_name not in geocode_cache:
-                    geocode_cache[source_name] = {}
-                geocode_cache[source_name][address] = {**cached_value, 'source': 'legacy'}
-                return {**cached_value, 'source': 'legacy'}
-            elif cached_value is None and not RETRY_FAILED_GEOCODES:
-                continue  # Try next source
-
-        # Check source-specific cache
+        # Check source-specific cache (including legacy)
         if source_name in geocode_cache:
             cached_value = geocode_cache[source_name].get(address) or geocode_cache[source_name].get(normalized)
-            if cached_value is not None and isinstance(cached_value, dict):
+            if cached_value is not None and isinstance(cached_value, dict) and 'lat' in cached_value:
                 # Cache hit with coordinates
+                # Tag with source if not already tagged
+                if 'source' not in cached_value:
+                    cached_value = {**cached_value, 'source': source_name}
                 return cached_value
             elif cached_value is None and not RETRY_FAILED_GEOCODES:
                 continue  # Try next source
 
-        # Cache miss - try geocoding with this source
-        if source_name in GEOCODERS:
+        # Special handling for legacy source - it's cache-only, no API calls
+        if source_name == 'legacy':
+            # Already checked cache above, move to next source
+            continue
+
+        # Cache miss - try geocoding with this source (skip if legacy)
+        if source_name in GEOCODERS and source_name != 'legacy':
             print(f"Geocoding {address} with {source_name}...")
             geocoder = GEOCODERS[source_name]()
             result = geocoder.geocode(normalized if normalized != address else address)
@@ -345,6 +355,7 @@ def get_geocoders():
     return jsonify({
         'available': list(GEOCODERS.keys()),
         'descriptions': {
+            'legacy': 'Legacy cached coordinates (cache-only, no API calls)',
             'nominatim': 'OpenStreetMap Nominatim (free, community-maintained)',
             'census': 'US Census Geocoding API (free, official government data)'
         }

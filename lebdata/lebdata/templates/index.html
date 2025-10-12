@@ -291,8 +291,8 @@
                     checkbox.type = 'checkbox';
                     checkbox.value = source;
                     checkbox.id = `source-${source}`;
-                    // Default: check all sources
-                    checkbox.checked = true;
+                    // Default: only check legacy (fast, cache-only)
+                    checkbox.checked = (source === 'legacy');
 
                     const description = data.descriptions[source] || source;
                     label.appendChild(checkbox);

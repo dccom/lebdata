@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  lebdata-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    ports:
+      - "80:80"
+    volumes:
+      - ./workspace:/app/workspace
+      - ./lebdata/lebdata/geocode_cache.json:/app/lebdata/lebdata/geocode_cache.json
+    environment:
+      - FLASK_ENV=production
+    restart: unless-stopped

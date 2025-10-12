@@ -2,51 +2,87 @@
 
 This project downloads and visualizes property assessment data for Lebanon, NH.
 
-## For Non-Programmers: Running with Docker Desktop
+## Quick Start
 
 ### Prerequisites
-1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-2. Download this entire `vgsi` folder
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine installed
 
-### Steps to Run
+### Development Mode (Port 5050)
 
-1. **Open Terminal/Command Prompt**
-   - **Mac**: Open Terminal (press Cmd+Space, type "Terminal")
-   - **Windows**: Open Command Prompt or PowerShell
+For local development with live code reload:
 
-2. **Navigate to the vgsi folder**
-   ```bash
-   cd path/to/vgsi
-   ```
-   (Replace `path/to/vgsi` with the actual path to the folder)
+```bash
+cd vgsi
+docker-compose up
+```
 
-3. **Start the server**
-   ```bash
-   docker-compose up
-   ```
+Then open http://localhost:5050 in your browser.
 
-4. **Open your browser**
-   - Go to: http://localhost:5050
-   - You should see an interactive map with property data
+To stop: Press `Ctrl+C` or run `docker-compose down`
 
-5. **To stop the server**
-   - Press `Ctrl+C` in the terminal
-   - Or run: `docker-compose down`
+### Production Deployment (Port 80)
+
+For production deployment with Gunicorn on standard HTTP port:
+
+```bash
+cd vgsi
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+Then open http://localhost in your browser (or use your server's IP/domain).
+
+To stop: `docker-compose -f docker-compose.prod.yml down`
+
+**Production features:**
+- Runs on port 80 (standard HTTP)
+- Uses Gunicorn with multiple workers for better performance
+- Runs as non-root user for security
+- Auto-restart on failure (`restart: unless-stopped`)
+- Optimized for stability and performance
 
 ### Troubleshooting
 
-- **Port 5050 already in use**: Change the port in `docker-compose.yml` from `5050:5000` to `8080:5000`, then visit http://localhost:8080
+- **Port 5050 already in use** (dev mode): Change the port in `docker-compose.yml` from `5050:5000` to `8080:5000`, then visit http://localhost:8080
+- **Port 80 already in use** (production): Either stop the other service using port 80, or edit `docker-compose.prod.yml` to use a different port (e.g., `8080:80`)
 - **Docker not found**: Make sure Docker Desktop is installed and running
-- **Loading takes too long**: The first time, it geocodes all addresses which can take a while. Subsequent loads will be faster.
+- **Permission denied on port 80**: On Linux, you may need to run with `sudo` or configure Docker to run rootless
+- **Loading takes too long**: The first time, it geocodes all addresses which can take a while. Subsequent loads will be faster
 
 ## Project Structure
 
 - `scripts/` - Python scripts for downloading and processing data
 - `lebdata/` - Flask web application for visualization
+  - `lebdata/app.py` - Main Flask application
+  - `lebdata/gunicorn.conf.py` - Gunicorn production configuration
+  - `lebdata/templates/` - HTML templates
 - `workspace/` - Downloaded data and CSV files
 - `.devcontainer/` - VS Code development container configuration
+- `Dockerfile` - Development container build
+- `Dockerfile.prod` - Production container build (Gunicorn, non-root user)
+- `docker-compose.yml` - Development configuration (port 5050)
+- `docker-compose.dev.yml` - Explicit development configuration
+- `docker-compose.prod.yml` - Production configuration (port 80)
 
 ## For Developers
+
+### Deployment Modes
+
+The application supports two deployment modes:
+
+**Development Mode:**
+- Flask development server with auto-reload
+- Port 5050 (to avoid AirPlay conflicts on Mac)
+- Live code updates via volume mounts
+- Debug mode enabled
+- Use: `docker-compose up`
+
+**Production Mode:**
+- Gunicorn WSGI server with multiple workers
+- Port 80 (standard HTTP)
+- Non-root user for security
+- Auto-restart on failure
+- Optimized performance
+- Use: `docker-compose -f docker-compose.prod.yml up -d`
 
 ### Geocoding System
 

@@ -1,8 +1,5 @@
 version: '3.8'
 
-# Default: Development mode
-# To run in production mode: docker-compose -f docker-compose.prod.yml up
-
 services:
   lebdata-web:
     build: .

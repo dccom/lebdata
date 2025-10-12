@@ -1,0 +1,27 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install dependencies
+COPY lebdata/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the application
+COPY lebdata/ ./lebdata/
+COPY workspace/ ./workspace/
+
+# Create non-root user
+RUN useradd -m -u 1000 lebdata && \
+    chown -R lebdata:lebdata /app
+
+USER lebdata
+
+# Expose port 80
+EXPOSE 80
+
+# Run with Gunicorn
+CMD ["gunicorn", "--config", "lebdata/gunicorn.conf.py", "lebdata.lebdata.app:app"]

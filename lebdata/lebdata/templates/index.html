@@ -364,7 +364,7 @@
 
         <div class="settings-section">
             <h5>Custom Heatmaps</h5>
-            <p class="help-text">Define custom heatmap layers using JSON specifications. Click "Edit" to view/modify the configuration.</p>
+            <p class="help-text">Define custom heatmap layers using JSON specifications. Use any numeric field shown in parcel popups (field names in parentheses). Click "Edit" to view/modify configurations.</p>
             <div id="heatmap-list"></div>
             <button onclick="addNewHeatmap()" style="width: 100%; margin-top: 8px;">+ Add New Heatmap</button>
 
@@ -691,17 +691,17 @@
         function addNewHeatmap() {
             const template = {
                 "name": "New Heatmap",
-                "description": "Description of what this heatmap shows",
+                "description": "Description of what this heatmap shows. Available fields: pct_change, assessment_2025, assessment_2024, assessment_2023, assessment_2022, assessment_2021, appraisal_2025, appraisal_2024, appraisal_2023, appraisal_2022, appraisal_2021",
                 "enabled": true,
                 "calculation": {
-                    "field": "pct_change",
-                    "transform": "Math.abs(value) / 100"
+                    "field": "assessment_2025",
+                    "transform": "value / 1000000"
                 },
                 "options": {
                     "radius": 25,
                     "blur": 15,
                     "maxZoom": 17,
-                    "max": 0.5,
+                    "max": 1.0,
                     "gradient": {
                         "0.0": "blue",
                         "0.2": "cyan",
@@ -779,14 +779,22 @@
                 const field = spec.calculation.field;
                 let value = parcel[field];
 
-                // If field is a path like "assessment_2025"
-                if (value === undefined) {
+                // If field is undefined or empty, return null
+                if (value === undefined || value === null || value === '') {
                     return null;
+                }
+
+                // Convert string numbers to numeric (handles currency fields stored as strings)
+                if (typeof value === 'string') {
+                    const numValue = parseFloat(value);
+                    if (!isNaN(numValue)) {
+                        value = numValue;
+                    }
                 }
 
                 // Apply transform if specified
                 if (spec.calculation.transform) {
-                    // Create a safe eval context
+                    // Create a safe eval context with both value and parcel available
                     value = new Function('value', 'parcel', `return ${spec.calculation.transform}`)(value, parcel);
                 }
 
@@ -933,16 +941,22 @@
                                 fillOpacity: 0.8
                             });
 
-                            // Create popup content with formatted currency values
+                            // Create popup content with formatted currency values and field names
                             const popupContent = `
                                 <strong>PID:</strong> ${parcel.pid}<br>
                                 <strong>Location:</strong> ${parcel.location}<br>
                                 <strong>Type:</strong> ${parcel.property_type}<br>
-                                <strong>Appraisal 2025:</strong> ${formatCurrency(parcel.appraisal_2025)}<br>
-                                <strong>Assessment 2025:</strong> ${formatCurrency(parcel.assessment_2025)}<br>
-                                <strong>Appraisal 2024:</strong> ${formatCurrency(parcel.appraisal_2024)}<br>
-                                <strong>Assessment 2024:</strong> ${formatCurrency(parcel.assessment_2024)}<br>
-                                <strong>Change:</strong> ${parcel.pct_change}%<br>
+                                <strong>Appraisal 2025</strong> (appraisal_2025): ${formatCurrency(parcel.appraisal_2025)}<br>
+                                <strong>Assessment 2025</strong> (assessment_2025): ${formatCurrency(parcel.assessment_2025)}<br>
+                                <strong>Appraisal 2024</strong> (appraisal_2024): ${formatCurrency(parcel.appraisal_2024)}<br>
+                                <strong>Assessment 2024</strong> (assessment_2024): ${formatCurrency(parcel.assessment_2024)}<br>
+                                <strong>Appraisal 2023</strong> (appraisal_2023): ${formatCurrency(parcel.appraisal_2023)}<br>
+                                <strong>Assessment 2023</strong> (assessment_2023): ${formatCurrency(parcel.assessment_2023)}<br>
+                                <strong>Appraisal 2022</strong> (appraisal_2022): ${formatCurrency(parcel.appraisal_2022)}<br>
+                                <strong>Assessment 2022</strong> (assessment_2022): ${formatCurrency(parcel.assessment_2022)}<br>
+                                <strong>Appraisal 2021</strong> (appraisal_2021): ${formatCurrency(parcel.appraisal_2021)}<br>
+                                <strong>Assessment 2021</strong> (assessment_2021): ${formatCurrency(parcel.assessment_2021)}<br>
+                                <strong>Change %</strong> (pct_change): ${parcel.pct_change}%<br>
                                 <strong>Geocode Source:</strong> ${source}
                             `;
 

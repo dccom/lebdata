@@ -54,7 +54,26 @@
             box-shadow: 0 0 15px rgba(0,0,0,0.3);
             z-index: 1000;
         }
-        .geocode-control {
+        .leaflet-control-settings {
+            background: white;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .leaflet-control-settings a {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: #333;
+            font-size: 18px;
+        }
+        .leaflet-control-settings a:hover {
+            background-color: #f4f4f4;
+        }
+        .settings-panel {
             position: absolute;
             top: 10px;
             right: 10px;
@@ -62,23 +81,46 @@
             padding: 15px;
             border-radius: 5px;
             box-shadow: 0 0 15px rgba(0,0,0,0.3);
-            z-index: 1000;
-            max-width: 300px;
+            z-index: 1001;
+            max-width: 320px;
+            display: none;
         }
-        .geocode-control h4 {
+        .settings-panel.visible {
+            display: block;
+        }
+        .settings-panel h4 {
             margin: 0 0 10px 0;
             font-size: 14px;
             color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .geocode-control label {
+        .settings-panel .close-btn {
+            cursor: pointer;
+            font-size: 20px;
+            color: #999;
+            background: none;
+            border: none;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            text-align: center;
+        }
+        .settings-panel .close-btn:hover {
+            color: #333;
+        }
+        .settings-panel label {
             display: block;
-            margin: 5px 0;
+            margin: 8px 0;
             font-size: 12px;
+            line-height: 1.4;
         }
-        .geocode-control input[type="checkbox"] {
+        .settings-panel input[type="checkbox"] {
             margin-right: 5px;
         }
-        .geocode-control button {
+        .settings-panel button {
             margin-top: 10px;
             padding: 8px 15px;
             background-color: #4CAF50;
@@ -89,35 +131,59 @@
             width: 100%;
             font-size: 13px;
         }
-        .geocode-control button:hover {
+        .settings-panel button:hover {
             background-color: #45a049;
         }
-        .geocode-control button:disabled {
+        .settings-panel button:disabled {
             background-color: #ccc;
             cursor: not-allowed;
         }
-        .geocode-control .help-text {
+        .settings-panel .help-text {
             font-size: 11px;
             color: #666;
-            margin-top: 5px;
+            margin: 10px 0;
             line-height: 1.4;
         }
-        .geocode-control .stats {
+        .settings-panel .stats {
             margin-top: 10px;
             padding-top: 10px;
             border-top: 1px solid #ddd;
             font-size: 11px;
             color: #666;
         }
+        .settings-section {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .settings-section:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .settings-section h5 {
+            margin: 0 0 8px 0;
+            font-size: 13px;
+            color: #555;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
     <div id="loading" class="loading">Loading parcel data...</div>
-    <div id="geocode-control" class="geocode-control">
-        <h4>Geocoding Sources</h4>
-        <p class="help-text">Select which geocoding services to use. Multiple sources will try each in order until coordinates are found.</p>
-        <div id="source-checkboxes"></div>
-        <button id="reload-btn" onclick="reloadWithSources()">Load Data</button>
+    <div id="settings-panel" class="settings-panel">
+        <h4>
+            <span>Map Settings</span>
+            <button class="close-btn" onclick="toggleSettings()">&times;</button>
+        </h4>
+
+        <div class="settings-section">
+            <h5>Geocoding Sources</h5>
+            <p class="help-text">Select which geocoding services to use. Multiple sources will try each in order until coordinates are found.</p>
+            <div id="source-checkboxes"></div>
+            <button id="reload-btn" onclick="reloadWithSources()">Load Data</button>
+        </div>
+
         <div id="stats" class="stats" style="display: none;"></div>
     </div>
     <div id="map"></div>
@@ -150,6 +216,36 @@
         };
 
         const layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+        // Add settings control
+        L.Control.Settings = L.Control.extend({
+            onAdd: function(map) {
+                const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-settings');
+                const link = L.DomUtil.create('a', '', container);
+                link.href = '#';
+                link.title = 'Settings';
+                link.innerHTML = '⚙️';
+
+                L.DomEvent.on(link, 'click', function(e) {
+                    L.DomEvent.preventDefault(e);
+                    toggleSettings();
+                });
+
+                return container;
+            }
+        });
+
+        L.control.settings = function(opts) {
+            return new L.Control.Settings(opts);
+        };
+
+        L.control.settings({ position: 'topleft' }).addTo(map);
+
+        // Toggle settings panel
+        function toggleSettings() {
+            const panel = document.getElementById('settings-panel');
+            panel.classList.toggle('visible');
+        }
 
         // Add legend
         const legend = L.control({position: 'bottomright'});

@@ -364,7 +364,7 @@
 
         <div class="settings-section">
             <h5>Custom Heatmaps</h5>
-            <p class="help-text">Define custom heatmap layers using JSON specifications. Use any numeric field shown in parcel popups (field names in parentheses). Click "Edit" to view/modify configurations.</p>
+            <p class="help-text">Define custom heatmap layers using JSON specifications. Transform formulas can use multiple fields via parcel.field_name (e.g., parcel.assessment_2025 - parcel.assessment_2024). See field names in parcel popups. Click "Edit" to view/modify.</p>
             <div id="heatmap-list"></div>
             <button onclick="addNewHeatmap()" style="width: 100%; margin-top: 8px;">+ Add New Heatmap</button>
 
@@ -677,17 +677,17 @@
         function addNewHeatmap() {
             const template = {
                 "name": "New Heatmap",
-                "description": "Description of what this heatmap shows. Available fields: pct_change, assessment_2025, assessment_2024, assessment_2023, assessment_2022, assessment_2021, appraisal_2025, appraisal_2024, appraisal_2023, appraisal_2022, appraisal_2021",
+                "description": "Example using multiple fields. Available: pct_change, assessment_2025, assessment_2024, assessment_2023, assessment_2022, assessment_2021, appraisal_2025, appraisal_2024, appraisal_2023, appraisal_2022, appraisal_2021. Access via parcel.field_name or use 'value' for the primary field.",
                 "enabled": true,
                 "calculation": {
                     "field": "assessment_2025",
-                    "transform": "value / 1000000"
+                    "transform": "(parcel.assessment_2025 - parcel.assessment_2024) / 1000"
                 },
                 "options": {
                     "radius": 25,
                     "blur": 15,
                     "maxZoom": 17,
-                    "max": 1.0,
+                    "max": 100,
                     "gradient": {
                         "0.0": "blue",
                         "0.2": "cyan",
@@ -762,25 +762,30 @@
         // Calculate heatmap value for a parcel
         function calculateHeatmapValue(parcel, spec) {
             try {
-                const field = spec.calculation.field;
-                let value = parcel[field];
+                let value = null;
 
-                // If field is undefined or empty, return null
-                if (value === undefined || value === null || value === '') {
-                    return null;
-                }
+                // Get primary field value if specified
+                if (spec.calculation.field) {
+                    const field = spec.calculation.field;
+                    value = parcel[field];
 
-                // Convert string numbers to numeric (handles currency fields stored as strings)
-                if (typeof value === 'string') {
-                    const numValue = parseFloat(value);
-                    if (!isNaN(numValue)) {
-                        value = numValue;
+                    // If field is undefined or empty, and no transform, return null
+                    if ((value === undefined || value === null || value === '') && !spec.calculation.transform) {
+                        return null;
+                    }
+
+                    // Convert string numbers to numeric (handles currency fields stored as strings)
+                    if (typeof value === 'string') {
+                        const numValue = parseFloat(value);
+                        if (!isNaN(numValue)) {
+                            value = numValue;
+                        }
                     }
                 }
 
                 // Apply transform if specified
+                // Transform can access 'value' (from field) and 'parcel' (entire object)
                 if (spec.calculation.transform) {
-                    // Create a safe eval context with both value and parcel available
                     value = new Function('value', 'parcel', `return ${spec.calculation.transform}`)(value, parcel);
                 }
 

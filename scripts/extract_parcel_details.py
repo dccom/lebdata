@@ -81,19 +81,23 @@ def extract_parcel_info(html_file):
         if location_match:
             location = location_match.group(1).strip()
 
-    # Extract current assessment
+    # Extract current assessment (remove $ and commas for consistency)
     assessment = parser.data.get('assessment_2025', '')
     if not assessment:
         assess_match = re.search(r'<span id="MainContent_lblGenAssessment">([^<]+)</span>', html_content)
         if assess_match:
             assessment = assess_match.group(1).strip()
+    # Clean the value: remove $ and commas
+    assessment = assessment.replace('$', '').replace(',', '').strip()
 
-    # Extract current appraisal
+    # Extract current appraisal (remove $ and commas for consistency)
     appraisal = parser.data.get('appraisal_2025', '')
     if not appraisal:
         appr_match = re.search(r'<span id="MainContent_lblGenAppraisal">([^<]+)</span>', html_content)
         if appr_match:
             appraisal = appr_match.group(1).strip()
+    # Clean the value: remove $ and commas
+    appraisal = appraisal.replace('$', '').replace(',', '').strip()
 
     # Extract property type
     property_type = parser.data.get('property_type', '')
@@ -153,8 +157,10 @@ def extract_parcel_info(html_file):
 
 def extract_all_parcels():
     """Extract data from all parcel HTML files and save to CSV."""
-    input_dir = Path("/workspaces/vgsi/workspace/lebanonnh/parcels")
-    output_file = Path("/workspaces/vgsi/workspace/lebanonnh/parcel_details.csv")
+    # Use relative paths from script location
+    script_dir = Path(__file__).parent
+    input_dir = script_dir.parent / "workspace" / "lebanonnh" / "parcels"
+    output_file = script_dir.parent / "workspace" / "lebanonnh" / "parcel_details.csv"
 
     # Get all parcel HTML files
     parcel_files = sorted(input_dir.glob("*.html"), key=lambda x: int(x.stem))

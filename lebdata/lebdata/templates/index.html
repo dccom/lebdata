@@ -504,6 +504,17 @@
                                     '#0000ff';
         }
 
+        // Format number as currency
+        function formatCurrency(value) {
+            if (!value || value === '') return 'N/A';
+            // Remove any existing $ and commas
+            const numValue = String(value).replace(/[$,]/g, '');
+            // Parse as number and format with commas
+            const num = parseFloat(numValue);
+            if (isNaN(num)) return value;
+            return '$' + num.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+        }
+
         // Available geocoders and descriptions
         let availableGeocoders = {};
 
@@ -600,13 +611,15 @@
                                 fillOpacity: 0.8
                             });
 
-                            // Create popup content
+                            // Create popup content with formatted currency values
                             const popupContent = `
                                 <strong>PID:</strong> ${parcel.pid}<br>
                                 <strong>Location:</strong> ${parcel.location}<br>
                                 <strong>Type:</strong> ${parcel.property_type}<br>
-                                <strong>Assessment 2025:</strong> ${parcel.assessment_2025}<br>
-                                <strong>Assessment 2024:</strong> ${parcel.assessment_2024}<br>
+                                <strong>Appraisal 2025:</strong> ${formatCurrency(parcel.appraisal_2025)}<br>
+                                <strong>Assessment 2025:</strong> ${formatCurrency(parcel.assessment_2025)}<br>
+                                <strong>Appraisal 2024:</strong> ${formatCurrency(parcel.appraisal_2024)}<br>
+                                <strong>Assessment 2024:</strong> ${formatCurrency(parcel.assessment_2024)}<br>
                                 <strong>Change:</strong> ${parcel.pct_change}%<br>
                                 <strong>Geocode Source:</strong> ${source}
                             `;

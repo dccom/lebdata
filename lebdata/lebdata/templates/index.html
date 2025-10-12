@@ -521,8 +521,8 @@
                     checkbox.type = 'checkbox';
                     checkbox.value = source;
                     checkbox.id = `source-${source}`;
-                    // Default: only check legacy (fast, cache-only)
-                    checkbox.checked = (source === 'legacy');
+                    // Default: check legacy and census for best coverage (both cache-only)
+                    checkbox.checked = (source === 'legacy' || source === 'census');
 
                     const description = data.descriptions[source] || source;
                     label.appendChild(checkbox);

@@ -167,6 +167,64 @@
             color: #555;
             font-weight: 600;
         }
+        .heatmap-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .heatmap-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .heatmap-item-name {
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .heatmap-item-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        .heatmap-btn {
+            padding: 2px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background: white;
+            border-radius: 3px;
+        }
+        .heatmap-btn:hover {
+            background: #f0f0f0;
+        }
+        .heatmap-item-description {
+            font-size: 11px;
+            color: #666;
+        }
+        .heatmap-editor {
+            margin-top: 10px;
+            display: none;
+        }
+        .heatmap-editor.visible {
+            display: block;
+        }
+        .heatmap-editor textarea {
+            width: 100%;
+            height: 200px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            box-sizing: border-box;
+        }
+        .heatmap-editor-buttons {
+            margin-top: 8px;
+            display: flex;
+            gap: 5px;
+        }
         .search-container {
             position: absolute;
             top: 10px;
@@ -304,6 +362,22 @@
             <button id="reload-btn" onclick="reloadWithSources()">Load Data</button>
         </div>
 
+        <div class="settings-section">
+            <h5>Custom Heatmaps</h5>
+            <p class="help-text">Define custom heatmap layers using JSON specifications. Click "Edit" to view/modify the configuration.</p>
+            <div id="heatmap-list"></div>
+            <button onclick="addNewHeatmap()" style="width: 100%; margin-top: 8px;">+ Add New Heatmap</button>
+
+            <div id="heatmap-editor" class="heatmap-editor">
+                <h5>Heatmap Configuration</h5>
+                <textarea id="heatmap-json" placeholder="Enter JSON configuration..."></textarea>
+                <div class="heatmap-editor-buttons">
+                    <button onclick="saveHeatmap()" style="flex: 1;">Save</button>
+                    <button onclick="cancelHeatmapEdit()" style="flex: 1; background: #ddd;">Cancel</button>
+                </div>
+            </div>
+        </div>
+
         <div id="stats" class="stats" style="display: none;"></div>
     </div>
     <div id="map"></div>
@@ -324,7 +398,8 @@
 
         // Layer groups
         const parcelMarkers = L.layerGroup().addTo(map);
-        let heatmapLayer = null;
+        let heatmapLayers = {};  // Store multiple heatmap layers
+        let currentEditingHeatmap = null;
 
         // Add layer control
         const baseMaps = {
@@ -335,7 +410,7 @@
             "Parcel Markers": parcelMarkers
         };
 
-        const layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
+        let layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
 
         // Add settings control
         L.Control.Settings = L.Control.extend({
@@ -518,6 +593,251 @@
         // Available geocoders and descriptions
         let availableGeocoders = {};
 
+        // ============================================================================
+        // Custom Heatmap System
+        // ============================================================================
+
+        // Default heatmap specifications
+        let heatmapSpecs = [
+            {
+                "name": "Assessment Change 2024-2025",
+                "description": "Shows absolute percentage change in assessment from 2024 to 2025",
+                "enabled": true,
+                "calculation": {
+                    "field": "pct_change",
+                    "transform": "Math.abs(value) / 100"
+                },
+                "options": {
+                    "radius": 25,
+                    "blur": 15,
+                    "maxZoom": 17,
+                    "max": 0.5,
+                    "gradient": {
+                        "0.0": "blue",
+                        "0.2": "cyan",
+                        "0.4": "lime",
+                        "0.6": "yellow",
+                        "0.8": "orange",
+                        "1.0": "red"
+                    }
+                }
+            }
+        ];
+
+        // Load heatmap specs from localStorage
+        function loadHeatmapSpecs() {
+            const saved = localStorage.getItem('customHeatmaps');
+            if (saved) {
+                try {
+                    heatmapSpecs = JSON.parse(saved);
+                } catch (e) {
+                    console.error('Error loading heatmap specs:', e);
+                }
+            }
+            renderHeatmapList();
+        }
+
+        // Save heatmap specs to localStorage
+        function saveHeatmapSpecs() {
+            localStorage.setItem('customHeatmaps', JSON.stringify(heatmapSpecs));
+        }
+
+        // Render heatmap list in settings
+        function renderHeatmapList() {
+            const listContainer = document.getElementById('heatmap-list');
+            listContainer.innerHTML = '';
+
+            heatmapSpecs.forEach((spec, index) => {
+                const item = document.createElement('div');
+                item.className = 'heatmap-item';
+
+                const header = document.createElement('div');
+                header.className = 'heatmap-item-header';
+
+                const name = document.createElement('div');
+                name.className = 'heatmap-item-name';
+                name.textContent = spec.name;
+
+                const buttons = document.createElement('div');
+                buttons.className = 'heatmap-item-buttons';
+
+                const editBtn = document.createElement('button');
+                editBtn.className = 'heatmap-btn';
+                editBtn.textContent = 'Edit';
+                editBtn.onclick = () => editHeatmap(index);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'heatmap-btn';
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.onclick = () => deleteHeatmap(index);
+
+                buttons.appendChild(editBtn);
+                buttons.appendChild(deleteBtn);
+
+                header.appendChild(name);
+                header.appendChild(buttons);
+
+                const description = document.createElement('div');
+                description.className = 'heatmap-item-description';
+                description.textContent = spec.description || 'No description';
+
+                item.appendChild(header);
+                item.appendChild(description);
+                listContainer.appendChild(item);
+            });
+        }
+
+        // Add new heatmap
+        function addNewHeatmap() {
+            const template = {
+                "name": "New Heatmap",
+                "description": "Description of what this heatmap shows",
+                "enabled": true,
+                "calculation": {
+                    "field": "pct_change",
+                    "transform": "Math.abs(value) / 100"
+                },
+                "options": {
+                    "radius": 25,
+                    "blur": 15,
+                    "maxZoom": 17,
+                    "max": 0.5,
+                    "gradient": {
+                        "0.0": "blue",
+                        "0.2": "cyan",
+                        "0.4": "lime",
+                        "0.6": "yellow",
+                        "0.8": "orange",
+                        "1.0": "red"
+                    }
+                }
+            };
+
+            currentEditingHeatmap = heatmapSpecs.length;
+            document.getElementById('heatmap-json').value = JSON.stringify(template, null, 2);
+            document.getElementById('heatmap-editor').classList.add('visible');
+        }
+
+        // Edit existing heatmap
+        function editHeatmap(index) {
+            currentEditingHeatmap = index;
+            document.getElementById('heatmap-json').value = JSON.stringify(heatmapSpecs[index], null, 2);
+            document.getElementById('heatmap-editor').classList.add('visible');
+        }
+
+        // Save heatmap
+        function saveHeatmap() {
+            const jsonText = document.getElementById('heatmap-json').value;
+            try {
+                const spec = JSON.parse(jsonText);
+
+                // Validate required fields
+                if (!spec.name || !spec.calculation || !spec.options) {
+                    alert('Invalid heatmap specification. Must include name, calculation, and options.');
+                    return;
+                }
+
+                if (currentEditingHeatmap === heatmapSpecs.length) {
+                    // Adding new
+                    heatmapSpecs.push(spec);
+                } else {
+                    // Updating existing
+                    heatmapSpecs[currentEditingHeatmap] = spec;
+                }
+
+                saveHeatmapSpecs();
+                renderHeatmapList();
+                cancelHeatmapEdit();
+
+                // Regenerate heatmaps
+                generateHeatmaps();
+            } catch (e) {
+                alert('Invalid JSON: ' + e.message);
+            }
+        }
+
+        // Cancel heatmap edit
+        function cancelHeatmapEdit() {
+            currentEditingHeatmap = null;
+            document.getElementById('heatmap-editor').classList.remove('visible');
+            document.getElementById('heatmap-json').value = '';
+        }
+
+        // Delete heatmap
+        function deleteHeatmap(index) {
+            if (confirm(`Delete "${heatmapSpecs[index].name}"?`)) {
+                heatmapSpecs.splice(index, 1);
+                saveHeatmapSpecs();
+                renderHeatmapList();
+                generateHeatmaps();
+            }
+        }
+
+        // Calculate heatmap value for a parcel
+        function calculateHeatmapValue(parcel, spec) {
+            try {
+                const field = spec.calculation.field;
+                let value = parcel[field];
+
+                // If field is a path like "assessment_2025"
+                if (value === undefined) {
+                    return null;
+                }
+
+                // Apply transform if specified
+                if (spec.calculation.transform) {
+                    // Create a safe eval context
+                    value = new Function('value', 'parcel', `return ${spec.calculation.transform}`)(value, parcel);
+                }
+
+                return value;
+            } catch (e) {
+                console.error('Error calculating heatmap value:', e);
+                return null;
+            }
+        }
+
+        // Generate all heatmaps from specifications
+        function generateHeatmaps() {
+            // Clear existing heatmap layers
+            Object.values(heatmapLayers).forEach(layer => {
+                if (map.hasLayer(layer)) {
+                    map.removeLayer(layer);
+                }
+            });
+            heatmapLayers = {};
+
+            // Remove old heatmaps from layer control
+            layerControl.remove();
+
+            // Generate new heatmaps
+            heatmapSpecs.forEach(spec => {
+                if (!spec.enabled) return;
+
+                const heatData = [];
+                allParcelsData.forEach(parcel => {
+                    if (parcel.lat && parcel.lon) {
+                        const value = calculateHeatmapValue(parcel, spec);
+                        if (value !== null && !isNaN(value)) {
+                            heatData.push([parcel.lat, parcel.lon, value]);
+                        }
+                    }
+                });
+
+                if (heatData.length > 0) {
+                    const heatmapLayer = L.heatLayer(heatData, spec.options);
+                    heatmapLayers[spec.name] = heatmapLayer;
+                    overlayMaps[spec.name] = heatmapLayer;
+                }
+            });
+
+            // Re-add layer control
+            layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
+        }
+
+        // Initialize heatmap specifications
+        loadHeatmapSpecs();
+
         // Load available geocoders
         fetch('/api/geocoders')
             .then(response => response.json())
@@ -557,11 +877,13 @@
         }
 
         function reloadWithSources() {
-            // Clear existing markers and heatmap
+            // Clear existing markers and heatmaps
             parcelMarkers.clearLayers();
-            if (heatmapLayer && map.hasLayer(heatmapLayer)) {
-                map.removeLayer(heatmapLayer);
-            }
+            Object.values(heatmapLayers).forEach(layer => {
+                if (map.hasLayer(layer)) {
+                    map.removeLayer(layer);
+                }
+            });
 
             // Reset stats
             document.getElementById('stats').style.display = 'none';
@@ -629,32 +951,11 @@
 
                             // Store marker reference for search functionality
                             parcelMarkersMap[parcel.pid] = marker;
-
-                            // Add to heatmap data (use intensity based on absolute percent change)
-                            heatData.push([parcel.lat, parcel.lon, Math.abs(parcel.pct_change) / 100]);
                         }
                     });
 
-                    // Create heatmap layer
-                    heatmapLayer = L.heatLayer(heatData, {
-                        radius: 25,
-                        blur: 15,
-                        maxZoom: 17,
-                        max: 0.5,
-                        gradient: {
-                            0.0: 'blue',
-                            0.2: 'cyan',
-                            0.4: 'lime',
-                            0.6: 'yellow',
-                            0.8: 'orange',
-                            1.0: 'red'
-                        }
-                    });
-
-                    // Add heatmap to layer control
-                    overlayMaps['Assessment Change Heatmap'] = heatmapLayer;
-                    layerControl.remove();
-                    L.control.layers(baseMaps, overlayMaps).addTo(map);
+                    // Generate heatmaps from user-defined specifications
+                    generateHeatmaps();
 
                     // Display statistics
                     const statsDiv = document.getElementById('stats');

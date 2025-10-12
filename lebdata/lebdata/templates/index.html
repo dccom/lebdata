@@ -399,6 +399,7 @@
         // Layer groups
         const parcelMarkers = L.layerGroup().addTo(map);
         let heatmapLayers = {};  // Store multiple heatmap layers
+        let heatmapLegends = {};  // Store legend controls for each heatmap
         let currentEditingHeatmap = null;
 
         // Add layer control
@@ -552,22 +553,7 @@
             }
         });
 
-        // Add legend
-        const legend = L.control({position: 'bottomright'});
-        legend.onAdd = function (map) {
-            const div = L.DomUtil.create('div', 'info legend');
-            div.innerHTML = '<h4>Assessment Change 2024-2025</h4>';
-            const grades = [-10, 0, 10, 20, 30, 40];
-            const colors = ['#0000ff', '#00ffff', '#00ff00', '#ffff00', '#ff8800', '#ff0000'];
-
-            for (let i = 0; i < grades.length; i++) {
-                div.innerHTML +=
-                    '<i style="background:' + colors[i] + '"></i> ' +
-                    grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '%<br>' : '+%');
-            }
-            return div;
-        };
-        legend.addTo(map);
+        // Legends are now created dynamically per heatmap in generateHeatmaps()
 
         // Function to get color based on percentage change
         function getColor(pctChange) {
@@ -805,6 +791,38 @@
             }
         }
 
+        // Create a legend for a heatmap specification
+        function createHeatmapLegend(spec) {
+            const legend = L.control({position: 'bottomright'});
+            legend.onAdd = function (map) {
+                const div = L.DomUtil.create('div', 'info legend');
+                div.innerHTML = `<h4>${spec.name}</h4>`;
+
+                // Get gradient stops from spec
+                const gradient = spec.options.gradient || {};
+                const stops = Object.keys(gradient).map(parseFloat).sort((a, b) => a - b);
+
+                // Calculate value ranges based on max option
+                const maxValue = spec.options.max || 1.0;
+
+                stops.forEach((stop, i) => {
+                    const color = gradient[stop.toFixed(1)];
+                    const value = (stop * maxValue).toFixed(2);
+                    const nextStop = stops[i + 1];
+
+                    if (nextStop !== undefined) {
+                        const nextValue = (nextStop * maxValue).toFixed(2);
+                        div.innerHTML += `<i style="background:${color}"></i> ${value}&ndash;${nextValue}<br>`;
+                    } else {
+                        div.innerHTML += `<i style="background:${color}"></i> ${value}+<br>`;
+                    }
+                });
+
+                return div;
+            };
+            return legend;
+        }
+
         // Generate all heatmaps from specifications
         function generateHeatmaps() {
             // Clear existing heatmap layers
@@ -814,6 +832,12 @@
                 }
             });
             heatmapLayers = {};
+
+            // Clear existing legends
+            Object.values(heatmapLegends).forEach(legend => {
+                legend.remove();
+            });
+            heatmapLegends = {};
 
             // Remove old heatmaps from layer control
             layerControl.remove();
@@ -836,6 +860,18 @@
                     const heatmapLayer = L.heatLayer(heatData, spec.options);
                     heatmapLayers[spec.name] = heatmapLayer;
                     overlayMaps[spec.name] = heatmapLayer;
+
+                    // Create legend for this heatmap
+                    const legend = createHeatmapLegend(spec);
+                    heatmapLegends[spec.name] = legend;
+
+                    // Add layer event listeners to show/hide legend
+                    heatmapLayer.on('add', function() {
+                        legend.addTo(map);
+                    });
+                    heatmapLayer.on('remove', function() {
+                        legend.remove();
+                    });
                 }
             });
 
@@ -891,6 +927,11 @@
                 if (map.hasLayer(layer)) {
                     map.removeLayer(layer);
                 }
+            });
+
+            // Clear existing legends
+            Object.values(heatmapLegends).forEach(legend => {
+                legend.remove();
             });
 
             // Reset stats

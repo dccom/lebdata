@@ -943,21 +943,80 @@
 
                             // Create popup content with formatted currency values and field names
                             const popupContent = `
-                                <strong>PID:</strong> ${parcel.pid}<br>
-                                <strong>Location:</strong> ${parcel.location}<br>
-                                <strong>Type:</strong> ${parcel.property_type}<br>
-                                <strong>Appraisal 2025</strong> (appraisal_2025): ${formatCurrency(parcel.appraisal_2025)}<br>
-                                <strong>Assessment 2025</strong> (assessment_2025): ${formatCurrency(parcel.assessment_2025)}<br>
-                                <strong>Appraisal 2024</strong> (appraisal_2024): ${formatCurrency(parcel.appraisal_2024)}<br>
-                                <strong>Assessment 2024</strong> (assessment_2024): ${formatCurrency(parcel.assessment_2024)}<br>
-                                <strong>Appraisal 2023</strong> (appraisal_2023): ${formatCurrency(parcel.appraisal_2023)}<br>
-                                <strong>Assessment 2023</strong> (assessment_2023): ${formatCurrency(parcel.assessment_2023)}<br>
-                                <strong>Appraisal 2022</strong> (appraisal_2022): ${formatCurrency(parcel.appraisal_2022)}<br>
-                                <strong>Assessment 2022</strong> (assessment_2022): ${formatCurrency(parcel.assessment_2022)}<br>
-                                <strong>Appraisal 2021</strong> (appraisal_2021): ${formatCurrency(parcel.appraisal_2021)}<br>
-                                <strong>Assessment 2021</strong> (assessment_2021): ${formatCurrency(parcel.assessment_2021)}<br>
-                                <strong>Change %</strong> (pct_change): ${parcel.pct_change}%<br>
-                                <strong>Geocode Source:</strong> ${source}
+                                <div style="font-size: 12px;">
+                                    <strong>PID:</strong> ${parcel.pid}<br>
+                                    <strong>Location:</strong> ${parcel.location}<br>
+                                    <strong>Type:</strong> ${parcel.property_type}<br><br>
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                                        <thead>
+                                            <tr style="border-bottom: 2px solid #333;">
+                                                <th style="text-align: left; padding: 4px;">Field</th>
+                                                <th style="text-align: left; padding: 4px;">Variable</th>
+                                                <th style="text-align: right; padding: 4px;">Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr style="border-bottom: 1px solid #ddd;">
+                                                <td style="padding: 3px;"><strong>Appraisal 2025</strong></td>
+                                                <td style="padding: 3px; color: #666;">appraisal_2025</td>
+                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.appraisal_2025)}</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid #ddd;">
+                                                <td style="padding: 3px;"><strong>Assessment 2025</strong></td>
+                                                <td style="padding: 3px; color: #666;">assessment_2025</td>
+                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.assessment_2025)}</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid #ddd;">
+                                                <td style="padding: 3px;"><strong>Appraisal 2024</strong></td>
+                                                <td style="padding: 3px; color: #666;">appraisal_2024</td>
+                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.appraisal_2024)}</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid #ddd;">
+                                                <td style="padding: 3px;"><strong>Assessment 2024</strong></td>
+                                                <td style="padding: 3px; color: #666;">assessment_2024</td>
+                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.assessment_2024)}</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid #ddd;">
+                                                <td style="padding: 3px;"><strong>Appraisal 2023</strong></td>
+                                                <td style="padding: 3px; color: #666;">appraisal_2023</td>
+                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.appraisal_2023)}</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid #ddd;">
+                                                <td style="padding: 3px;"><strong>Assessment 2023</strong></td>
+                                                <td style="padding: 3px; color: #666;">assessment_2023</td>
+                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.assessment_2023)}</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid #ddd;">
+                                                <td style="padding: 3px;"><strong>Appraisal 2022</strong></td>
+                                                <td style="padding: 3px; color: #666;">appraisal_2022</td>
+                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.appraisal_2022)}</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid #ddd;">
+                                                <td style="padding: 3px;"><strong>Assessment 2022</strong></td>
+                                                <td style="padding: 3px; color: #666;">assessment_2022</td>
+                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.assessment_2022)}</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid #ddd;">
+                                                <td style="padding: 3px;"><strong>Appraisal 2021</strong></td>
+                                                <td style="padding: 3px; color: #666;">appraisal_2021</td>
+                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.appraisal_2021)}</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid #ddd;">
+                                                <td style="padding: 3px;"><strong>Assessment 2021</strong></td>
+                                                <td style="padding: 3px; color: #666;">assessment_2021</td>
+                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.assessment_2021)}</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid #ddd;">
+                                                <td style="padding: 3px;"><strong>2024-2025 Assessment Change %</strong></td>
+                                                <td style="padding: 3px; color: #666;">pct_change</td>
+                                                <td style="text-align: right; padding: 3px;">${parcel.pct_change}%</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <div style="margin-top: 8px; font-size: 10px; color: #666;">
+                                        <strong>Geocode Source:</strong> ${source}
+                                    </div>
+                                </div>
                             `;
 
                             marker.bindPopup(popupContent);

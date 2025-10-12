@@ -167,10 +167,130 @@
             color: #555;
             font-weight: 600;
         }
+        .search-container {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            width: 400px;
+            max-width: calc(100% - 20px);
+        }
+        .search-box {
+            position: relative;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+        }
+        .search-input {
+            width: 100%;
+            padding: 12px 40px 12px 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        .search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            pointer-events: none;
+        }
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin-top: 5px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+        }
+        .search-results.visible {
+            display: block;
+        }
+        .search-results-header {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f9f9f9;
+            border-radius: 5px 5px 0 0;
+        }
+        .search-results-header h4 {
+            margin: 0;
+            font-size: 13px;
+            color: #333;
+        }
+        .search-results-close {
+            cursor: pointer;
+            font-size: 18px;
+            color: #999;
+            background: none;
+            border: none;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            text-align: center;
+        }
+        .search-results-close:hover {
+            color: #333;
+        }
+        .search-result-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .search-result-item:hover {
+            background-color: #f5f5f5;
+        }
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        .search-result-address {
+            font-weight: 600;
+            color: #333;
+            font-size: 13px;
+        }
+        .search-result-details {
+            font-size: 11px;
+            color: #666;
+            margin-top: 3px;
+        }
+        .search-no-results {
+            padding: 20px;
+            text-align: center;
+            color: #999;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
     <div id="loading" class="loading">Loading parcel data...</div>
+
+    <div class="search-container">
+        <div class="search-box">
+            <input type="text" id="search-input" class="search-input" placeholder="Search for property address...">
+            <span class="search-icon">🔍</span>
+        </div>
+        <div id="search-results" class="search-results">
+            <div class="search-results-header">
+                <h4 id="search-results-count">0 results</h4>
+                <button class="search-results-close" onclick="closeSearchResults()">&times;</button>
+            </div>
+            <div id="search-results-list"></div>
+        </div>
+    </div>
+
     <div id="settings-panel" class="settings-panel">
         <h4>
             <span>Map Settings</span>
@@ -246,6 +366,116 @@
             const panel = document.getElementById('settings-panel');
             panel.classList.toggle('visible');
         }
+
+        // ============================================================================
+        // Property Search Functionality
+        // ============================================================================
+
+        let allParcelsData = [];  // Store all loaded parcels for searching
+        let parcelMarkersMap = {};  // Map parcel PIDs to their markers
+
+        // Search for properties
+        function searchProperties() {
+            const searchInput = document.getElementById('search-input');
+            const searchTerm = searchInput.value.trim().toLowerCase();
+
+            if (searchTerm.length === 0) {
+                closeSearchResults();
+                return;
+            }
+
+            // Search through all parcels (case-insensitive)
+            const results = allParcelsData.filter(parcel => {
+                const address = (parcel.location || '').toLowerCase();
+                return address.includes(searchTerm);
+            });
+
+            displaySearchResults(results, searchTerm);
+        }
+
+        // Display search results
+        function displaySearchResults(results, searchTerm) {
+            const resultsContainer = document.getElementById('search-results');
+            const resultsList = document.getElementById('search-results-list');
+            const resultsCount = document.getElementById('search-results-count');
+
+            // Clear previous results
+            resultsList.innerHTML = '';
+
+            // Update count
+            resultsCount.textContent = `${results.length} result${results.length !== 1 ? 's' : ''}`;
+
+            if (results.length === 0) {
+                resultsList.innerHTML = '<div class="search-no-results">No properties found matching "' + searchTerm + '"</div>';
+            } else {
+                // Display each result
+                results.forEach(parcel => {
+                    const item = document.createElement('div');
+                    item.className = 'search-result-item';
+                    item.onclick = () => selectParcel(parcel);
+
+                    const address = document.createElement('div');
+                    address.className = 'search-result-address';
+                    address.textContent = parcel.location;
+
+                    const details = document.createElement('div');
+                    details.className = 'search-result-details';
+                    details.textContent = `PID: ${parcel.pid} | ${parcel.property_type} | Change: ${parcel.pct_change}%`;
+
+                    item.appendChild(address);
+                    item.appendChild(details);
+                    resultsList.appendChild(item);
+                });
+            }
+
+            // Show results
+            resultsContainer.classList.add('visible');
+        }
+
+        // Close search results
+        function closeSearchResults() {
+            const resultsContainer = document.getElementById('search-results');
+            resultsContainer.classList.remove('visible');
+        }
+
+        // Select a parcel from search results
+        function selectParcel(parcel) {
+            if (!parcel.lat || !parcel.lon) {
+                alert('This property does not have location coordinates.');
+                return;
+            }
+
+            // Close search results
+            closeSearchResults();
+
+            // Zoom to the parcel
+            map.setView([parcel.lat, parcel.lon], 18);
+
+            // Open the marker popup
+            const marker = parcelMarkersMap[parcel.pid];
+            if (marker) {
+                marker.openPopup();
+            }
+        }
+
+        // Set up search input listener
+        document.getElementById('search-input').addEventListener('input', function(e) {
+            searchProperties();
+        });
+
+        // Close search results when clicking outside
+        document.addEventListener('click', function(e) {
+            const searchContainer = document.querySelector('.search-container');
+            const settingsPanel = document.getElementById('settings-panel');
+
+            if (!searchContainer.contains(e.target) && !settingsPanel.contains(e.target)) {
+                // Clicked outside search and settings, close search results
+                const resultsContainer = document.getElementById('search-results');
+                if (resultsContainer.classList.contains('visible')) {
+                    closeSearchResults();
+                }
+            }
+        });
 
         // Add legend
         const legend = L.control({position: 'bottomright'});
@@ -343,6 +573,10 @@
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('reload-btn').disabled = false;
 
+                    // Store all parcels for search functionality
+                    allParcelsData = parcels;
+                    parcelMarkersMap = {};  // Reset marker map
+
                     // Prepare data for heatmap
                     const heatData = [];
 
@@ -379,6 +613,9 @@
 
                             marker.bindPopup(popupContent);
                             marker.addTo(parcelMarkers);
+
+                            // Store marker reference for search functionality
+                            parcelMarkersMap[parcel.pid] = marker;
 
                             // Add to heatmap data (use intensity based on absolute percent change)
                             heatData.push([parcel.lat, parcel.lon, Math.abs(parcel.pct_change) / 100]);

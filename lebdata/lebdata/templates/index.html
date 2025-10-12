@@ -677,7 +677,7 @@
         function addNewHeatmap() {
             const template = {
                 "name": "New Heatmap",
-                "description": "Example using multiple fields. Available: pct_change, assessment_2025, assessment_2024, assessment_2023, assessment_2022, assessment_2021, appraisal_2025, appraisal_2024, appraisal_2023, appraisal_2022, appraisal_2021. Access via parcel.field_name or use 'value' for the primary field.",
+                "description": "Example using multiple fields. Available: pct_change, assessment_2025, assessment_2024, assessment_2023, assessment_2022, assessment_2021, appraisal_2025, appraisal_2024, appraisal_2023, appraisal_2022, appraisal_2021. Access via parcel.field_name or use 'value' for the primary field. Note: gradient keys must be 0.0-1.0 (not actual values), max controls data scaling.",
                 "enabled": true,
                 "calculation": {
                     "field": "assessment_2025",
@@ -721,6 +721,18 @@
                 if (!spec.name || !spec.calculation || !spec.options) {
                     alert('Invalid heatmap specification. Must include name, calculation, and options.');
                     return;
+                }
+
+                // Validate gradient keys are between 0.0 and 1.0
+                if (spec.options.gradient) {
+                    const invalidKeys = Object.keys(spec.options.gradient).filter(key => {
+                        const numKey = parseFloat(key);
+                        return numKey < 0 || numKey > 1;
+                    });
+                    if (invalidKeys.length > 0) {
+                        alert(`Invalid gradient keys: ${invalidKeys.join(', ')}. Gradient keys must be between 0.0 and 1.0 (not actual data values). Use the 'max' option to control data scaling.`);
+                        return;
+                    }
                 }
 
                 if (currentEditingHeatmap === heatmapSpecs.length) {

@@ -107,6 +107,25 @@ def extract_parcel_info(html_file):
         if model_match:
             property_type = model_match.group(1)
 
+    # Extract building square footage from Sub-Areas table
+    gross_sqft = ''
+    living_sqft = ''
+
+    # Find Building Sub-Areas table and extract totals from footer
+    sub_areas_match = re.search(
+        r'<caption>\s*Building Sub-Areas.*?</caption>.*?<tr class="FooterStyle">(.*?)</tr>',
+        html_content, re.DOTALL
+    )
+    if sub_areas_match:
+        footer_content = sub_areas_match.group(1)
+        # Extract the two numeric values from footer (gross and living area)
+        # Pattern matches: <td align="right">\n                    3,533\n                </td>
+        sqft_pattern = r'<td align="right">\s*([\d,]+)\s*</td>'
+        sqft_matches = re.findall(sqft_pattern, footer_content)
+        if len(sqft_matches) >= 2:
+            gross_sqft = sqft_matches[0].replace(',', '')
+            living_sqft = sqft_matches[1].replace(',', '')
+
     # Extract historical valuation data
     appraisal_years = {}
     assessment_years = {}
@@ -142,6 +161,8 @@ def extract_parcel_info(html_file):
         'pid': pid,
         'location': location,
         'property_type': property_type,
+        'gross_sqft': gross_sqft,
+        'living_sqft': living_sqft,
         'assessment_2025': assessment,
         'appraisal_2025': appraisal,
         'appraisal_2024': appraisal_years.get('2024', ''),
@@ -185,6 +206,8 @@ def extract_all_parcels():
             'pid',
             'location',
             'property_type',
+            'gross_sqft',
+            'living_sqft',
             'appraisal_2025',
             'assessment_2025',
             'appraisal_2024',

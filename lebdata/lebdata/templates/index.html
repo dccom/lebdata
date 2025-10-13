@@ -884,8 +884,6 @@
 
             // Generate new heatmaps
             heatmapSpecs.forEach(spec => {
-                if (!spec.enabled) return;
-
                 const heatData = [];
                 allParcelsData.forEach(parcel => {
                     if (parcel.lat && parcel.lon) {
@@ -912,6 +910,11 @@
                     heatmapLayer.on('remove', function() {
                         legend.remove();
                     });
+
+                    // If enabled by default, add to map
+                    if (spec.enabled) {
+                        heatmapLayer.addTo(map);
+                    }
                 }
             });
 

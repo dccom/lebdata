@@ -1048,141 +1048,148 @@
                                 fillOpacity: 0.8
                             });
 
-                            // Build heatmap values table for visible heatmaps
-                            let heatmapTable = '';
-                            const visibleHeatmaps = heatmapSpecs.filter(spec => {
-                                const layer = heatmapLayers[spec.name];
-                                return layer && map.hasLayer(layer);
-                            });
-
-                            if (visibleHeatmaps.length > 0) {
-                                heatmapTable = `
-                                    <h4 style="margin: 12px 0 6px 0; font-size: 12px;">Active Heatmap Values</h4>
-                                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 8px;">
-                                        <thead>
-                                            <tr style="border-bottom: 2px solid #333;">
-                                                <th style="text-align: left; padding: 4px;">Heatmap</th>
-                                                <th style="text-align: right; padding: 4px;">Value</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>`;
-
-                                visibleHeatmaps.forEach(spec => {
-                                    const value = calculateHeatmapValue(parcel, spec);
-                                    let displayValue = 'N/A';
-                                    if (value !== null && !isNaN(value)) {
-                                        // Format based on heatmap type
-                                        if (spec.name.includes('per Sq Ft')) {
-                                            displayValue = '$' + value.toFixed(2);
-                                        } else if (spec.name.includes('Change')) {
-                                            displayValue = (value * 100).toFixed(2) + '%';
-                                        } else {
-                                            displayValue = value.toFixed(2);
-                                        }
-                                    }
-                                    heatmapTable += `
-                                            <tr style="border-bottom: 1px solid #ddd;">
-                                                <td style="padding: 3px;">${spec.name}</td>
-                                                <td style="text-align: right; padding: 3px;">${displayValue}</td>
-                                            </tr>`;
+                            // Function to generate popup content dynamically
+                            const generatePopupContent = () => {
+                                // Build heatmap values table for visible heatmaps
+                                let heatmapTable = '';
+                                const visibleHeatmaps = heatmapSpecs.filter(spec => {
+                                    const layer = heatmapLayers[spec.name];
+                                    return layer && map.hasLayer(layer);
                                 });
 
-                                heatmapTable += `
-                                        </tbody>
-                                    </table>`;
-                            }
+                                if (visibleHeatmaps.length > 0) {
+                                    heatmapTable = `
+                                        <h4 style="margin: 12px 0 6px 0; font-size: 12px;">Active Heatmap Values</h4>
+                                        <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 8px;">
+                                            <thead>
+                                                <tr style="border-bottom: 2px solid #333;">
+                                                    <th style="text-align: left; padding: 4px;">Heatmap</th>
+                                                    <th style="text-align: right; padding: 4px;">Value</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>`;
 
-                            // Create popup content with formatted currency values and field names
-                            const popupContent = `
-                                <div style="font-size: 12px;">
-                                    <strong>PID:</strong> ${parcel.pid}<br>
-                                    <strong>Location:</strong> ${parcel.location}<br>
-                                    <strong>Type:</strong> ${parcel.property_type}<br>
-                                    ${heatmapTable}
-                                    <h4 style="margin: 12px 0 6px 0; font-size: 12px;">Property Details</h4>
-                                    <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                                        <thead>
-                                            <tr style="border-bottom: 2px solid #333;">
-                                                <th style="text-align: left; padding: 4px;">Field</th>
-                                                <th style="text-align: left; padding: 4px;">Variable</th>
-                                                <th style="text-align: right; padding: 4px;">Value</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr style="border-bottom: 1px solid #ddd;">
-                                                <td style="padding: 3px;"><strong>Gross Sq Ft</strong></td>
-                                                <td style="padding: 3px; color: #666;">gross_sqft</td>
-                                                <td style="text-align: right; padding: 3px;">${parcel.gross_sqft || 'N/A'}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #ddd;">
-                                                <td style="padding: 3px;"><strong>Living Sq Ft</strong></td>
-                                                <td style="padding: 3px; color: #666;">living_sqft</td>
-                                                <td style="text-align: right; padding: 3px;">${parcel.living_sqft || 'N/A'}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #ddd;">
-                                                <td style="padding: 3px;"><strong>Appraisal 2025</strong></td>
-                                                <td style="padding: 3px; color: #666;">appraisal_2025</td>
-                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.appraisal_2025)}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #ddd;">
-                                                <td style="padding: 3px;"><strong>Assessment 2025</strong></td>
-                                                <td style="padding: 3px; color: #666;">assessment_2025</td>
-                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.assessment_2025)}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #ddd;">
-                                                <td style="padding: 3px;"><strong>Appraisal 2024</strong></td>
-                                                <td style="padding: 3px; color: #666;">appraisal_2024</td>
-                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.appraisal_2024)}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #ddd;">
-                                                <td style="padding: 3px;"><strong>Assessment 2024</strong></td>
-                                                <td style="padding: 3px; color: #666;">assessment_2024</td>
-                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.assessment_2024)}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #ddd;">
-                                                <td style="padding: 3px;"><strong>Appraisal 2023</strong></td>
-                                                <td style="padding: 3px; color: #666;">appraisal_2023</td>
-                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.appraisal_2023)}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #ddd;">
-                                                <td style="padding: 3px;"><strong>Assessment 2023</strong></td>
-                                                <td style="padding: 3px; color: #666;">assessment_2023</td>
-                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.assessment_2023)}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #ddd;">
-                                                <td style="padding: 3px;"><strong>Appraisal 2022</strong></td>
-                                                <td style="padding: 3px; color: #666;">appraisal_2022</td>
-                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.appraisal_2022)}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #ddd;">
-                                                <td style="padding: 3px;"><strong>Assessment 2022</strong></td>
-                                                <td style="padding: 3px; color: #666;">assessment_2022</td>
-                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.assessment_2022)}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #ddd;">
-                                                <td style="padding: 3px;"><strong>Appraisal 2021</strong></td>
-                                                <td style="padding: 3px; color: #666;">appraisal_2021</td>
-                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.appraisal_2021)}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #ddd;">
-                                                <td style="padding: 3px;"><strong>Assessment 2021</strong></td>
-                                                <td style="padding: 3px; color: #666;">assessment_2021</td>
-                                                <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.assessment_2021)}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #ddd;">
-                                                <td style="padding: 3px;"><strong>2024-2025 Assessment Change %</strong></td>
-                                                <td style="padding: 3px; color: #666;">pct_change</td>
-                                                <td style="text-align: right; padding: 3px;">${parcel.pct_change}%</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                    <div style="margin-top: 8px; font-size: 10px; color: #666;">
-                                        <strong>Geocode Source:</strong> ${source}
+                                    visibleHeatmaps.forEach(spec => {
+                                        const value = calculateHeatmapValue(parcel, spec);
+                                        let displayValue = 'N/A';
+                                        if (value !== null && !isNaN(value)) {
+                                            // Format based on heatmap type
+                                            if (spec.name.includes('per Sq Ft')) {
+                                                displayValue = '$' + value.toFixed(2);
+                                            } else if (spec.name.includes('Change')) {
+                                                displayValue = (value * 100).toFixed(2) + '%';
+                                            } else {
+                                                displayValue = value.toFixed(2);
+                                            }
+                                        }
+                                        heatmapTable += `
+                                                <tr style="border-bottom: 1px solid #ddd;">
+                                                    <td style="padding: 3px;">${spec.name}</td>
+                                                    <td style="text-align: right; padding: 3px;">${displayValue}</td>
+                                                </tr>`;
+                                    });
+
+                                    heatmapTable += `
+                                            </tbody>
+                                        </table>`;
+                                }
+
+                                // Return complete popup content
+                                return `
+                                    <div style="font-size: 12px;">
+                                        <strong>PID:</strong> ${parcel.pid}<br>
+                                        <strong>Location:</strong> ${parcel.location}<br>
+                                        <strong>Type:</strong> ${parcel.property_type}<br>
+                                        ${heatmapTable}
+                                        <h4 style="margin: 12px 0 6px 0; font-size: 12px;">Property Details</h4>
+                                        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                                            <thead>
+                                                <tr style="border-bottom: 2px solid #333;">
+                                                    <th style="text-align: left; padding: 4px;">Field</th>
+                                                    <th style="text-align: left; padding: 4px;">Variable</th>
+                                                    <th style="text-align: right; padding: 4px;">Value</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr style="border-bottom: 1px solid #ddd;">
+                                                    <td style="padding: 3px;"><strong>Gross Sq Ft</strong></td>
+                                                    <td style="padding: 3px; color: #666;">gross_sqft</td>
+                                                    <td style="text-align: right; padding: 3px;">${parcel.gross_sqft || 'N/A'}</td>
+                                                </tr>
+                                                <tr style="border-bottom: 1px solid #ddd;">
+                                                    <td style="padding: 3px;"><strong>Living Sq Ft</strong></td>
+                                                    <td style="padding: 3px; color: #666;">living_sqft</td>
+                                                    <td style="text-align: right; padding: 3px;">${parcel.living_sqft || 'N/A'}</td>
+                                                </tr>
+                                                <tr style="border-bottom: 1px solid #ddd;">
+                                                    <td style="padding: 3px;"><strong>Appraisal 2025</strong></td>
+                                                    <td style="padding: 3px; color: #666;">appraisal_2025</td>
+                                                    <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.appraisal_2025)}</td>
+                                                </tr>
+                                                <tr style="border-bottom: 1px solid #ddd;">
+                                                    <td style="padding: 3px;"><strong>Assessment 2025</strong></td>
+                                                    <td style="padding: 3px; color: #666;">assessment_2025</td>
+                                                    <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.assessment_2025)}</td>
+                                                </tr>
+                                                <tr style="border-bottom: 1px solid #ddd;">
+                                                    <td style="padding: 3px;"><strong>Appraisal 2024</strong></td>
+                                                    <td style="padding: 3px; color: #666;">appraisal_2024</td>
+                                                    <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.appraisal_2024)}</td>
+                                                </tr>
+                                                <tr style="border-bottom: 1px solid #ddd;">
+                                                    <td style="padding: 3px;"><strong>Assessment 2024</strong></td>
+                                                    <td style="padding: 3px; color: #666;">assessment_2024</td>
+                                                    <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.assessment_2024)}</td>
+                                                </tr>
+                                                <tr style="border-bottom: 1px solid #ddd;">
+                                                    <td style="padding: 3px;"><strong>Appraisal 2023</strong></td>
+                                                    <td style="padding: 3px; color: #666;">appraisal_2023</td>
+                                                    <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.appraisal_2023)}</td>
+                                                </tr>
+                                                <tr style="border-bottom: 1px solid #ddd;">
+                                                    <td style="padding: 3px;"><strong>Assessment 2023</strong></td>
+                                                    <td style="padding: 3px; color: #666;">assessment_2023</td>
+                                                    <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.assessment_2023)}</td>
+                                                </tr>
+                                                <tr style="border-bottom: 1px solid #ddd;">
+                                                    <td style="padding: 3px;"><strong>Appraisal 2022</strong></td>
+                                                    <td style="padding: 3px; color: #666;">appraisal_2022</td>
+                                                    <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.appraisal_2022)}</td>
+                                                </tr>
+                                                <tr style="border-bottom: 1px solid #ddd;">
+                                                    <td style="padding: 3px;"><strong>Assessment 2022</strong></td>
+                                                    <td style="padding: 3px; color: #666;">assessment_2022</td>
+                                                    <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.assessment_2022)}</td>
+                                                </tr>
+                                                <tr style="border-bottom: 1px solid #ddd;">
+                                                    <td style="padding: 3px;"><strong>Appraisal 2021</strong></td>
+                                                    <td style="padding: 3px; color: #666;">appraisal_2021</td>
+                                                    <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.appraisal_2021)}</td>
+                                                </tr>
+                                                <tr style="border-bottom: 1px solid #ddd;">
+                                                    <td style="padding: 3px;"><strong>Assessment 2021</strong></td>
+                                                    <td style="padding: 3px; color: #666;">assessment_2021</td>
+                                                    <td style="text-align: right; padding: 3px;">${formatCurrency(parcel.assessment_2021)}</td>
+                                                </tr>
+                                                <tr style="border-bottom: 1px solid #ddd;">
+                                                    <td style="padding: 3px;"><strong>2024-2025 Assessment Change %</strong></td>
+                                                    <td style="padding: 3px; color: #666;">pct_change</td>
+                                                    <td style="text-align: right; padding: 3px;">${parcel.pct_change}%</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                        <div style="margin-top: 8px; font-size: 10px; color: #666;">
+                                            <strong>Geocode Source:</strong> ${source}
+                                        </div>
                                     </div>
-                                </div>
-                            `;
+                                `;
+                            };
 
-                            marker.bindPopup(popupContent);
+                            // Bind popup and regenerate content on open
+                            marker.bindPopup(generatePopupContent);
+                            marker.on('popupopen', function() {
+                                this.setPopupContent(generatePopupContent());
+                            });
                             marker.addTo(parcelMarkers);
 
                             // Store marker reference for search functionality

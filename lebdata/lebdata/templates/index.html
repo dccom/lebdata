@@ -607,6 +607,29 @@
                         "1.0": "red"
                     }
                 }
+            },
+            {
+                "name": "2025 Assessment per Sq Ft",
+                "description": "Shows 2025 assessment value per livable square foot",
+                "enabled": false,
+                "calculation": {
+                    "field": "assessment_2025",
+                    "transform": "parcel.living_sqft > 0 ? parcel.assessment_2025 / parcel.living_sqft : null"
+                },
+                "options": {
+                    "radius": 25,
+                    "blur": 15,
+                    "maxZoom": 17,
+                    "max": 500,
+                    "gradient": {
+                        "0.0": "blue",
+                        "0.2": "cyan",
+                        "0.4": "lime",
+                        "0.6": "yellow",
+                        "0.8": "orange",
+                        "1.0": "red"
+                    }
+                }
             }
         ];
 

@@ -630,6 +630,29 @@
                         "1.0": "red"
                     }
                 }
+            },
+            {
+                "name": "Assessment Change 2022-2025",
+                "description": "Shows absolute percentage change in assessment from 2022 to 2025",
+                "enabled": false,
+                "calculation": {
+                    "field": "assessment_2025",
+                    "transform": "(parcel.assessment_2022 > 0 && parcel.assessment_2025 > 0) ? Math.abs(100 * (parcel.assessment_2025 - parcel.assessment_2022) / parcel.assessment_2022) / 100 : null"
+                },
+                "options": {
+                    "radius": 25,
+                    "blur": 15,
+                    "maxZoom": 17,
+                    "max": 0.5,
+                    "gradient": {
+                        "0.0": "blue",
+                        "0.2": "cyan",
+                        "0.4": "lime",
+                        "0.6": "yellow",
+                        "0.8": "orange",
+                        "1.0": "red"
+                    }
+                }
             }
         ];
 

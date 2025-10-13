@@ -677,7 +677,7 @@
         function addNewHeatmap() {
             const template = {
                 "name": "New Heatmap",
-                "description": "Example using multiple fields. Available: pct_change, assessment_2025, assessment_2024, assessment_2023, assessment_2022, assessment_2021, appraisal_2025, appraisal_2024, appraisal_2023, appraisal_2022, appraisal_2021. Access via parcel.field_name or use 'value' for the primary field. Note: gradient keys must be 0.0-1.0 (not actual values), max controls data scaling.",
+                "description": "Example using multiple fields. Available: gross_sqft, living_sqft, pct_change, assessment_2025, assessment_2024, assessment_2023, assessment_2022, assessment_2021, appraisal_2025, appraisal_2024, appraisal_2023, appraisal_2022, appraisal_2021. Access via parcel.field_name or use 'value' for the primary field. Note: gradient keys must be 0.0-1.0 (not actual values), max controls data scaling.",
                 "enabled": true,
                 "calculation": {
                     "field": "assessment_2025",
@@ -1014,6 +1014,16 @@
                                             </tr>
                                         </thead>
                                         <tbody>
+                                            <tr style="border-bottom: 1px solid #ddd;">
+                                                <td style="padding: 3px;"><strong>Gross Sq Ft</strong></td>
+                                                <td style="padding: 3px; color: #666;">gross_sqft</td>
+                                                <td style="text-align: right; padding: 3px;">${parcel.gross_sqft || 'N/A'}</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid #ddd;">
+                                                <td style="padding: 3px;"><strong>Living Sq Ft</strong></td>
+                                                <td style="padding: 3px; color: #666;">living_sqft</td>
+                                                <td style="text-align: right; padding: 3px;">${parcel.living_sqft || 'N/A'}</td>
+                                            </tr>
                                             <tr style="border-bottom: 1px solid #ddd;">
                                                 <td style="padding: 3px;"><strong>Appraisal 2025</strong></td>
                                                 <td style="padding: 3px; color: #666;">appraisal_2025</td>

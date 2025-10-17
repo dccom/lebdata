@@ -363,6 +363,14 @@
         </div>
 
         <div class="settings-section">
+            <h5>Marker Coloring</h5>
+            <p class="help-text">Choose which heatmap to use for coloring parcel markers. Markers will automatically update when you toggle heatmap layers.</p>
+            <select id="marker-color-select" onchange="updateMarkerColors()" style="width: 100%; padding: 4px; margin-top: 4px;">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+
+        <div class="settings-section">
             <h5>Custom Heatmaps</h5>
             <p class="help-text">Define custom heatmap layers using JSON specifications. Transform formulas can use multiple fields via parcel.field_name (e.g., parcel.assessment_2025 - parcel.assessment_2024). See field names in parcel popups. Click "Edit" to view/modify.</p>
             <div id="heatmap-list"></div>
@@ -401,6 +409,7 @@
         let heatmapLayers = {};  // Store multiple heatmap layers
         let heatmapLegends = {};  // Store legend controls for each heatmap
         let currentEditingHeatmap = null;
+        let selectedMarkerColorSource = 'Assessment Change 2024-2025';  // Default marker coloring
 
         // Add layer control
         const baseMaps = {
@@ -555,7 +564,7 @@
 
         // Legends are now created dynamically per heatmap in generateHeatmaps()
 
-        // Function to get color based on percentage change
+        // Function to get color based on percentage change (legacy)
         function getColor(pctChange) {
             return pctChange > 40 ? '#ff0000' :
                    pctChange > 30 ? '#ff8800' :
@@ -563,6 +572,47 @@
                    pctChange > 10 ? '#00ff00' :
                    pctChange > 0  ? '#00ffff' :
                                     '#0000ff';
+        }
+
+        // Get color for a parcel based on selected heatmap
+        function getColorForParcel(parcel) {
+            // Find the selected heatmap spec
+            const spec = heatmapSpecs.find(s => s.name === selectedMarkerColorSource);
+            if (!spec) {
+                // Fallback to legacy pct_change coloring
+                return getColor(parcel.pct_change);
+            }
+
+            // Calculate the value for this parcel
+            const value = calculateHeatmapValue(parcel, spec);
+            if (value === null || isNaN(value)) {
+                return '#808080'; // Gray for N/A
+            }
+
+            // Normalize value to 0-1 range based on spec's max
+            const maxValue = spec.options.max || 1.0;
+            const normalizedValue = Math.min(value / maxValue, 1.0);
+
+            // Get color from gradient
+            const gradient = spec.options.gradient || {};
+            const stops = Object.keys(gradient).map(parseFloat).sort((a, b) => a - b);
+
+            // Find the two stops to interpolate between
+            for (let i = 0; i < stops.length - 1; i++) {
+                if (normalizedValue >= stops[i] && normalizedValue <= stops[i + 1]) {
+                    // For simplicity, return the lower stop's color
+                    // Could implement interpolation here for smoother gradients
+                    return gradient[stops[i].toFixed(1)];
+                }
+            }
+
+            // If beyond max, return the last color
+            if (normalizedValue >= stops[stops.length - 1]) {
+                return gradient[stops[stops.length - 1].toFixed(1)];
+            }
+
+            // If below min, return the first color
+            return gradient[stops[0].toFixed(1)];
         }
 
         // Format number as currency
@@ -938,11 +988,61 @@
                     if (spec.enabled) {
                         heatmapLayer.addTo(map);
                     }
+
+                    // Add event listener to switch marker colors when layer is toggled
+                    heatmapLayer.on('add', function() {
+                        selectedMarkerColorSource = spec.name;
+                        updateMarkerColorSelect();
+                        updateMarkerColors();
+                    });
                 }
             });
 
             // Re-add layer control
             layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+            // Update marker color dropdown
+            updateMarkerColorSelect();
+        }
+
+        // Populate the marker color select dropdown
+        function updateMarkerColorSelect() {
+            const select = document.getElementById('marker-color-select');
+            if (!select) return;
+
+            // Save current selection
+            const currentValue = select.value || selectedMarkerColorSource;
+
+            // Clear and repopulate
+            select.innerHTML = '';
+            heatmapSpecs.forEach(spec => {
+                const option = document.createElement('option');
+                option.value = spec.name;
+                option.textContent = spec.name;
+                if (spec.name === currentValue) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+
+            // Update the global variable
+            selectedMarkerColorSource = select.value;
+        }
+
+        // Update all marker colors based on selected heatmap
+        function updateMarkerColors() {
+            const select = document.getElementById('marker-color-select');
+            if (select) {
+                selectedMarkerColorSource = select.value;
+            }
+
+            // Update each marker's color
+            parcelMarkers.eachLayer(function(marker) {
+                if (marker.parcelData) {
+                    const newColor = getColorForParcel(marker.parcelData);
+                    marker.setStyle({ fillColor: newColor });
+                }
+            });
         }
 
         // Initialize heatmap specifications
@@ -1041,12 +1141,15 @@
                             // Create marker
                             const marker = L.circleMarker([parcel.lat, parcel.lon], {
                                 radius: 6,
-                                fillColor: getColor(parcel.pct_change),
+                                fillColor: getColorForParcel(parcel),
                                 color: '#000',
                                 weight: 1,
                                 opacity: 1,
                                 fillOpacity: 0.8
                             });
+
+                            // Store parcel data on marker for later color updates
+                            marker.parcelData = parcel;
 
                             // Function to generate popup content dynamically
                             const generatePopupContent = () => {

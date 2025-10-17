@@ -1008,7 +1008,8 @@
                     console.log('Switching marker colors to:', event.name);
                     selectedMarkerColorSource = event.name;
                     updateMarkerColorSelect();
-                    updateMarkerColors();
+                    // Pass true to skip reading from select element
+                    updateMarkerColors(true);
                 }
             });
         }
@@ -1038,10 +1039,14 @@
         }
 
         // Update all marker colors based on selected heatmap
-        function updateMarkerColors() {
-            const select = document.getElementById('marker-color-select');
-            if (select) {
-                selectedMarkerColorSource = select.value;
+        function updateMarkerColors(skipSelectRead = false) {
+            // Only read from select if called from user interaction with dropdown
+            // Skip when called programmatically with a pre-set selectedMarkerColorSource
+            if (!skipSelectRead) {
+                const select = document.getElementById('marker-color-select');
+                if (select) {
+                    selectedMarkerColorSource = select.value;
+                }
             }
 
             console.log('Updating marker colors to:', selectedMarkerColorSource);

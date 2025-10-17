@@ -579,6 +579,7 @@
             // Find the selected heatmap spec
             const spec = heatmapSpecs.find(s => s.name === selectedMarkerColorSource);
             if (!spec) {
+                console.warn('No spec found for:', selectedMarkerColorSource);
                 // Fallback to legacy pct_change coloring
                 return getColor(parcel.pct_change);
             }
@@ -1043,13 +1044,19 @@
                 selectedMarkerColorSource = select.value;
             }
 
+            console.log('Updating marker colors to:', selectedMarkerColorSource);
+            let markersUpdated = 0;
+
             // Update each marker's color
             parcelMarkers.eachLayer(function(marker) {
                 if (marker.parcelData) {
                     const newColor = getColorForParcel(marker.parcelData);
                     marker.setStyle({ fillColor: newColor });
+                    markersUpdated++;
                 }
             });
+
+            console.log('Updated', markersUpdated, 'markers');
         }
 
         // Initialize heatmap specifications

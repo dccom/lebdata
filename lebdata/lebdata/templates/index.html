@@ -994,20 +994,22 @@
             // Re-add layer control
             layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
 
-            // Listen for layer control events on the map
-            map.off('overlayadd'); // Remove old listener if exists
+            // Update marker color dropdown
+            updateMarkerColorSelect();
+        }
+
+        // Setup event listener for layer control changes (called once on init)
+        function setupLayerControlListeners() {
             map.on('overlayadd', function(event) {
+                console.log('Layer added:', event.name);
                 // Check if this is a heatmap layer
-                const heatmapName = event.name;
-                if (heatmapLayers[heatmapName]) {
-                    selectedMarkerColorSource = heatmapName;
+                if (heatmapLayers[event.name]) {
+                    console.log('Switching marker colors to:', event.name);
+                    selectedMarkerColorSource = event.name;
                     updateMarkerColorSelect();
                     updateMarkerColors();
                 }
             });
-
-            // Update marker color dropdown
-            updateMarkerColorSelect();
         }
 
         // Populate the marker color select dropdown
@@ -1052,6 +1054,9 @@
 
         // Initialize heatmap specifications
         loadHeatmapSpecs();
+
+        // Setup layer control event listeners
+        setupLayerControlListeners();
 
         // Load available geocoders
         fetch('/api/geocoders')

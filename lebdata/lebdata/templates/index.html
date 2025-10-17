@@ -1019,8 +1019,8 @@
             const select = document.getElementById('marker-color-select');
             if (!select) return;
 
-            // Save current selection
-            const currentValue = select.value || selectedMarkerColorSource;
+            // Use the current value from global variable (don't read from select)
+            const currentValue = selectedMarkerColorSource;
 
             // Clear and repopulate
             select.innerHTML = '';
@@ -1034,8 +1034,7 @@
                 select.appendChild(option);
             });
 
-            // Update the global variable
-            selectedMarkerColorSource = select.value;
+            // Don't update the global variable here - it's already set
         }
 
         // Update all marker colors based on selected heatmap

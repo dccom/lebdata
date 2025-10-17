@@ -988,18 +988,23 @@
                     if (spec.enabled) {
                         heatmapLayer.addTo(map);
                     }
-
-                    // Add event listener to switch marker colors when layer is toggled
-                    heatmapLayer.on('add', function() {
-                        selectedMarkerColorSource = spec.name;
-                        updateMarkerColorSelect();
-                        updateMarkerColors();
-                    });
                 }
             });
 
             // Re-add layer control
             layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+            // Listen for layer control events on the map
+            map.off('overlayadd'); // Remove old listener if exists
+            map.on('overlayadd', function(event) {
+                // Check if this is a heatmap layer
+                const heatmapName = event.name;
+                if (heatmapLayers[heatmapName]) {
+                    selectedMarkerColorSource = heatmapName;
+                    updateMarkerColorSelect();
+                    updateMarkerColors();
+                }
+            });
 
             // Update marker color dropdown
             updateMarkerColorSelect();

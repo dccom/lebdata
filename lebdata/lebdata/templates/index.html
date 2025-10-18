@@ -1258,16 +1258,28 @@
 
                         // Function to generate popup content dynamically
                         const generatePopupContent = () => {
-                            // Build heatmap values table for visible heatmaps
+                            // Build heatmap values table
                             let heatmapTable = '';
-                            const visibleHeatmaps = heatmapSpecs.filter(spec => {
+
+                            // Collect heatmaps to show: visible layers + selected marker color source
+                            const heatmapsToShow = new Set();
+
+                            // Add visible heatmap layers
+                            heatmapSpecs.forEach(spec => {
                                 const layer = heatmapLayers[spec.name];
-                                return layer && map.hasLayer(layer);
+                                if (layer && map.hasLayer(layer)) {
+                                    heatmapsToShow.add(spec.name);
+                                }
                             });
 
-                            if (visibleHeatmaps.length > 0) {
+                            // Always add the selected marker color source
+                            if (selectedMarkerColorSource) {
+                                heatmapsToShow.add(selectedMarkerColorSource);
+                            }
+
+                            if (heatmapsToShow.size > 0) {
                                 heatmapTable = `
-                                    <h4 style="margin: 12px 0 6px 0; font-size: 12px;">Active Heatmap Values</h4>
+                                    <h4 style="margin: 12px 0 6px 0; font-size: 12px;">Heatmap Values</h4>
                                     <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 8px;">
                                         <thead>
                                             <tr style="border-bottom: 2px solid #333;">
@@ -1277,24 +1289,32 @@
                                         </thead>
                                         <tbody>`;
 
-                                visibleHeatmaps.forEach(spec => {
-                                    const value = calculateHeatmapValue(parcel, spec);
-                                    let displayValue = 'N/A';
-                                    if (value !== null && !isNaN(value)) {
-                                        // Format based on heatmap type
-                                        if (spec.name.includes('per Sq Ft')) {
-                                            displayValue = '$' + value.toFixed(2);
-                                        } else if (spec.name.includes('Change')) {
-                                            displayValue = (value * 100).toFixed(2) + '%';
-                                        } else {
-                                            displayValue = value.toFixed(2);
+                                // Show values for selected heatmaps
+                                heatmapSpecs.forEach(spec => {
+                                    if (heatmapsToShow.has(spec.name)) {
+                                        const value = calculateHeatmapValue(parcel, spec);
+                                        let displayValue = 'N/A';
+                                        if (value !== null && !isNaN(value)) {
+                                            // Format based on heatmap type
+                                            if (spec.name.includes('per Sq Ft')) {
+                                                displayValue = '$' + value.toFixed(2);
+                                            } else if (spec.name.includes('Change')) {
+                                                displayValue = (value * 100).toFixed(2) + '%';
+                                            } else {
+                                                displayValue = value.toFixed(2);
+                                            }
                                         }
-                                    }
-                                    heatmapTable += `
-                                            <tr style="border-bottom: 1px solid #ddd;">
-                                                <td style="padding: 3px;">${spec.name}</td>
+
+                                        // Highlight the marker color source
+                                        const isMarkerColor = spec.name === selectedMarkerColorSource;
+                                        const rowStyle = isMarkerColor ? ' style="background-color: #ffffcc;"' : '';
+
+                                        heatmapTable += `
+                                            <tr${rowStyle} style="border-bottom: 1px solid #ddd;">
+                                                <td style="padding: 3px;">${spec.name}${isMarkerColor ? ' ★' : ''}</td>
                                                 <td style="text-align: right; padding: 3px;">${displayValue}</td>
                                             </tr>`;
+                                    }
                                 });
 
                                 heatmapTable += `

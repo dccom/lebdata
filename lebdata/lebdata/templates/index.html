@@ -992,12 +992,12 @@
                     const legend = createHeatmapLegend(spec);
                     heatmapLegends[spec.name] = legend;
 
-                    // Add layer event listeners to show/hide legend
+                    // Add layer event listeners to update legend visibility
                     heatmapLayer.on('add', function() {
-                        legend.addTo(map);
+                        updateLegendVisibility();
                     });
                     heatmapLayer.on('remove', function() {
-                        legend.remove();
+                        updateLegendVisibility();
                     });
 
                     // If enabled by default, add to map
@@ -1012,6 +1012,9 @@
 
             // Update marker color dropdown
             updateMarkerColorSelect();
+
+            // Show legend for selected marker color source
+            updateLegendVisibility();
         }
 
         // Setup event listener for layer control changes (called once on init)
@@ -1076,6 +1079,29 @@
             return minRadius + (normalizedValue * (maxRadius - minRadius));
         }
 
+        // Update legend visibility based on selected marker color source
+        function updateLegendVisibility() {
+            // Hide all legends first
+            Object.keys(heatmapLegends).forEach(name => {
+                const legend = heatmapLegends[name];
+                const layer = heatmapLayers[name];
+                // Only remove if heatmap layer is not visible
+                if (layer && !map.hasLayer(layer)) {
+                    legend.remove();
+                }
+            });
+
+            // Show legend for selected marker color source
+            if (selectedMarkerColorSource && heatmapLegends[selectedMarkerColorSource]) {
+                const legend = heatmapLegends[selectedMarkerColorSource];
+                const layer = heatmapLayers[selectedMarkerColorSource];
+                // Add legend if not already on map (whether heatmap layer is visible or not)
+                if (!map.hasControl(legend)) {
+                    legend.addTo(map);
+                }
+            }
+        }
+
         // Update all marker colors based on selected heatmap
         function updateMarkerColors(skipSelectRead = false) {
             // Only read from select if called from user interaction with dropdown
@@ -1101,6 +1127,9 @@
             });
 
             console.log('Updated', markersUpdated, 'markers');
+
+            // Update legend visibility to show legend for selected marker coloring
+            updateLegendVisibility();
         }
 
         // Initialize heatmap specifications

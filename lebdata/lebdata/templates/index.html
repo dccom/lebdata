@@ -1081,25 +1081,32 @@
 
         // Update legend visibility based on selected marker color source
         function updateLegendVisibility() {
-            // Hide all legends first
+            // Remove all legends first
             Object.keys(heatmapLegends).forEach(name => {
                 const legend = heatmapLegends[name];
-                const layer = heatmapLayers[name];
-                // Only remove if heatmap layer is not visible
-                if (layer && !map.hasLayer(layer)) {
+                try {
                     legend.remove();
+                } catch (e) {
+                    // Legend might not be on map, ignore error
                 }
             });
 
             // Show legend for selected marker color source
             if (selectedMarkerColorSource && heatmapLegends[selectedMarkerColorSource]) {
                 const legend = heatmapLegends[selectedMarkerColorSource];
-                const layer = heatmapLayers[selectedMarkerColorSource];
-                // Add legend if not already on map (whether heatmap layer is visible or not)
-                if (!map.hasControl(legend)) {
-                    legend.addTo(map);
-                }
+                legend.addTo(map);
             }
+
+            // Also show legends for any visible heatmap layers
+            Object.keys(heatmapLayers).forEach(name => {
+                const layer = heatmapLayers[name];
+                if (layer && map.hasLayer(layer) && name !== selectedMarkerColorSource) {
+                    const legend = heatmapLegends[name];
+                    if (legend) {
+                        legend.addTo(map);
+                    }
+                }
+            });
         }
 
         // Update all marker colors based on selected heatmap
